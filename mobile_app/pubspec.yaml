@@ -1,0 +1,49 @@
+# mobile_app/pubspec.yaml
+name: mobile_app
+description: "A new Flutter project."
+
+# Prevent accidental publishing
+publish_to: 'none'
+
+# App versioning
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # iOS-style icons
+  cupertino_icons: ^1.0.8
+
+  # ===== REQUIRED DEPENDENCIES (STEP 4.3) =====
+  flutter_blue_plus: ^1.35.0
+  geolocator: ^10.1.0
+  local_auth: ^2.1.7
+  dio: ^5.4.0
+  flutter_riverpod: ^2.4.9
+  shared_preferences: ^2.2.2
+  permission_handler: ^11.0.1
+  uuid: ^4.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Recommended lints
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Assets section (enable when needed)
+  # assets:
+  #   - images/
+
+  # Fonts section (enable when needed)
+  # fonts:
+  #   - family: CustomFont
+  #     fonts:
+  #       - asset: fonts/CustomFont-Regular.ttf
