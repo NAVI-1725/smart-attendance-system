@@ -1,4 +1,5 @@
 # backend\app\api\v1\attendance.py
+# backend\app\api\v1\attendance.py
 from fastapi import APIRouter, Depends, HTTPException
 import logging
 from sqlalchemy.orm import Session as DBSession
@@ -39,7 +40,11 @@ def submit_attendance(
     )
 
     if not session:
-        return {"status": "no_active_session"}
+        raise ApiError(
+            ErrorCode.CLASS_NOT_ACTIVE,
+            "No active classroom",
+            status_code=404,
+        )
 
     logger.info(
         "BLE evidence received",
@@ -220,7 +225,11 @@ def resolve_attendance(
     ).first()
 
     if not attendance:
-        raise HTTPException(status_code=404, detail="Attendance record missing")
+        raise ApiError(
+            ErrorCode.SESSION_MISSING,
+            "Attendance record missing",
+            status_code=404,
+        )
 
     ensure_faculty_owns_classroom(db, current_user.id, attendance.classroom_id)
 
