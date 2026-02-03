@@ -1,6 +1,6 @@
 # backend/app/db/base.py
-
 from app.db.base_class import Base
+import app.models
 
 # Import ALL models so Alembic can see them
 # from app.models.user import User

@@ -1,6 +1,7 @@
+# backend\app\models\device.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
-from app.core.database import Base
+from app.db.base import Base
 
 
 class Device(Base):

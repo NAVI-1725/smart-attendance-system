@@ -7,8 +7,7 @@ from app.models.device import Device
 from app.models.user import User
 from app.core.auth import get_current_user
 
-router = APIRouter(prefix="/devices", tags=["Devices"])
-
+router = APIRouter(tags=["Devices"])
 
 @router.post("/bind")
 def bind_device(

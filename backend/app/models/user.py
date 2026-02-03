@@ -1,12 +1,19 @@
 # backend\app\models\user.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
+from enum import Enum
 
 # NOTE:
 # Alembic uses app.db.base.Base as the canonical metadata source.
 # This import is aligned to ensure the User table is registered
 # in the same MetaData used by Alembic autogeneration.
 from app.db.base import Base
+
+
+class UserRole(str, Enum):
+    admin = "admin"
+    faculty = "faculty"
+    student = "student"
 
 
 class User(Base):

@@ -1,9 +1,7 @@
 # backend\app\api\v1\attendance.py
 from fastapi import APIRouter, Depends
 import logging
-
 from sqlalchemy.orm import Session as DBSession
-
 from app.db.session import get_db
 from app.core.auth import get_current_user
 from app.models.user import User
@@ -14,8 +12,7 @@ from app.schemas.attendance import AttendanceAttemptRequest
 from app.services.attendance_flagging import classify_attendance
 
 
-router = APIRouter(prefix="/attendance", tags=["Attendance"])
-
+router = APIRouter(tags=["Attendance"])
 logger = logging.getLogger(__name__)
 
 
@@ -41,14 +38,13 @@ def submit_attendance(
         extra={"ble": data.ble_evidence},
     )
 
-    # Create attendance row
-    attendance = AttendanceAttempt()
+    # Deterministic status assignment (must occur BEFORE flush to satisfy NOT NULL DB constraint)
+    status = classify_attendance(data.ble_evidence)
+
+    # Create attendance row WITH status to avoid NULL insert
+    attendance = AttendanceAttempt(status=status)
     db.add(attendance)
     db.flush()  # ensures attendance.id is available
-
-    # Deterministic status assignment
-    status = classify_attendance(data.ble_evidence)
-    attendance.status = status
 
     # Optional BLE evidence persistence
     if data.ble_evidence is not None:

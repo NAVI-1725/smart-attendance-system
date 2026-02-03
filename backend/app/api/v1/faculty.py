@@ -2,12 +2,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user, get_db
+from app.core.dependencies import get_current_user, get_db, require_faculty
 from app.models.attendance import AttendanceAttempt, AttendanceStatus
 from app.models.faculty_action_logs import FacultyActionLog
 from app.schemas.faculty_resolution import FacultyResolutionRequest
 
-router = APIRouter(tags=["Faculty"])
+router = APIRouter(
+    tags=["Faculty"],
+    dependencies=[Depends(require_faculty)],
+)
+
 
 @router.post("/attendance/resolve")
 def resolve_attendance(
@@ -15,14 +19,14 @@ def resolve_attendance(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    # 1️⃣ Faculty-only authority
-    if current_user.role != "faculty":
+    # 1️⃣ Faculty-only authority (case-safe)
+    if current_user.role.upper() != "FACULTY":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Faculty access required",
         )
 
-    # 2️⃣ Attendance existence
+    # 2️⃣ Attendance existence (CORRECT ORM MODEL)
     attendance = (
         db.query(AttendanceAttempt)
         .filter(AttendanceAttempt.id == data.attendance_id)
@@ -47,7 +51,7 @@ def resolve_attendance(
     # 4️⃣ Apply resolution
     attendance.status = AttendanceStatus(data.new_status)
 
-    # 5️⃣ Immutable audit log
+    # 5️⃣ Immutable audit log (exam-critical)
     log = FacultyActionLog(
         faculty_id=current_user.id,
         attendance_id=attendance.id,

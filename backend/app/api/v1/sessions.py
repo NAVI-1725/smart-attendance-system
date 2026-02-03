@@ -1,24 +1,29 @@
 # backend\app\api\v1\sessions.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
-
 from app.db.session import get_db
 from app.core.auth import get_current_user
 from app.models.session import Session
 from app.models.user import User
 
-router = APIRouter(prefix="/sessions", tags=["Sessions"])
+router = APIRouter(tags=["Sessions"])
 
 
 @router.post("/start")
 def start_session(
+    classroom_id: int,   # NEW — classroom passed from client
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.role != "FACULTY":
         raise HTTPException(status_code=403, detail="Only faculty can start sessions")
 
-    session = Session(faculty_id=current_user.id, is_active=True)
+    session = Session(
+        faculty_id=current_user.id,
+        classroom_id=classroom_id,   # NEW — bind session to classroom
+        is_active=True,
+    )
+
     db.add(session)
     db.commit()
     db.refresh(session)

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/presentation/auth_provider.dart';
 import '../attendance/presentation/session_provider.dart';
 import '../attendance/presentation/attendance_provider.dart';
+import '../attendance/domain/attendance_status.dart';
+
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -76,11 +78,13 @@ class HomeScreen extends ConsumerWidget {
             // 6️⃣ Attendance Result UI (READ-ONLY)
             if (attendanceState.attempt != null)
               Text(
-                attendanceState.attempt!.status == 'CONFIRMED'
+                attendanceState.attempt!.status == AttendanceStatus.confirmed
                     ? 'Confirmed'
                     : 'Flagged – Pending review',
                 style: TextStyle(
-                  color: attendanceState.attempt!.status == 'CONFIRMED'
+                  color:
+                      attendanceState.attempt!.status ==
+                          AttendanceStatus.confirmed
                       ? Colors.green
                       : Colors.orange,
                   fontWeight: FontWeight.bold,
