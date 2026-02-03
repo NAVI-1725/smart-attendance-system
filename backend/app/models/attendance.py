@@ -1,6 +1,6 @@
 # backend\app\models\attendance.py
 from enum import Enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import Enum as SqlEnum
 from app.db.base_class import Base
@@ -13,6 +13,10 @@ class AttendanceStatus(str, Enum):
 
 class AttendanceAttempt(Base):
     __tablename__ = "attendance"
+
+    __table_args__ = (
+        UniqueConstraint("student_id", "session_id"),
+    )
 
     id = Column(Integer, primary_key=True)
 
