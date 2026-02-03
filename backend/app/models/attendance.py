@@ -1,6 +1,6 @@
-# backend/app/models/attendance.py
+# backend\app\models\attendance.py
 from enum import Enum
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import Enum as SqlEnum
 from app.db.base_class import Base
@@ -29,6 +29,9 @@ class AttendanceAttempt(Base):
         String,
         nullable=False,
     )
+
+    # STEP 2.6 — Attendance Close + Lock
+    is_locked = Column(Boolean, default=False)
 
     ble_evidence = relationship(
         "AttendanceBleEvidence",
