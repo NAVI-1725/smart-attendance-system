@@ -26,6 +26,7 @@ from app.models.user import User
 from app.models.attendance import AttendanceAttempt
 
 from app.models.faculty_action_logs import FacultyActionLog
+from app.models.beacon_secret import BeaconSecret
 
 target_metadata = Base.metadata
 
@@ -76,9 +77,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

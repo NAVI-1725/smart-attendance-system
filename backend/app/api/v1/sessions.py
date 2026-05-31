@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
 from app.db.session import get_db
 from app.core.auth import get_current_user
-from app.models.session import Session
+from app.models.attendance_session import AttendanceSession
 from app.models.user import User
 
 router = APIRouter(tags=["Sessions"])
@@ -11,16 +11,16 @@ router = APIRouter(tags=["Sessions"])
 
 @router.post("/start")
 def start_session(
-    classroom_id: int,   # NEW — classroom passed from client
+    classroom_id: int,  # NEW — classroom passed from client
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.role != "FACULTY":
         raise HTTPException(status_code=403, detail="Only faculty can start sessions")
 
-    session = Session(
+    session = AttendanceSession(
         faculty_id=current_user.id,
-        classroom_id=classroom_id,   # NEW — bind session to classroom
+        classroom_id=classroom_id,  # NEW — bind session to classroom
         is_active=True,
     )
 
@@ -33,5 +33,8 @@ def start_session(
 
 @router.get("/active")
 def get_active_session(db: DBSession = Depends(get_db)):
-    session = db.query(Session).filter(Session.is_active == True).first()
+    session = (
+        db.query(AttendanceSession).filter(AttendanceSession.is_active ).first()
+    )
+
     return {"session_id": session.id} if session else None

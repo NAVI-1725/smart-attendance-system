@@ -9,6 +9,7 @@ from app.core.auth import get_current_user
 
 router = APIRouter(tags=["Devices"])
 
+
 @router.post("/bind")
 def bind_device(
     payload: dict,
@@ -28,7 +29,7 @@ def bind_device(
         db.query(Device)
         .filter(
             Device.user_id == current_user.id,
-            Device.is_active == True,
+            Device.is_active ,
         )
         .first()
     )

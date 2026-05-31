@@ -1,8 +1,15 @@
 # backend\app\models\__init__.py
-from app.models.user import User
-from app.models.device import Device
-from app.models.attendance import AttendanceAttempt
-from app.models.attendance_ble_evidence import AttendanceBleEvidence
-from app.models.session import Session
-from app.models.classroom import Classroom
-from app.models.enrollment import Enrollment
+from app.models.user import User as User
+from app.models.device import Device as Device
+from app.models.attendance import AttendanceAttempt as AttendanceAttempt
+from app.models.attendance_ble_evidence import (
+    AttendanceBleEvidence as AttendanceBleEvidence,
+)
+from app.models.session import Session as Session
+from app.models.classroom import Classroom as Classroom
+from app.models.enrollment import Enrollment as Enrollment
+from app.models.auth_session import AuthSession as AuthSession
+from app.models.attendance_session import AttendanceSession as AttendanceSession
+from app.models.attendance_ble_nonce import AttendanceBLENonce as AttendanceBLENonce
+from app.models.trusted_ble_beacon import TrustedBLEBeacon as TrustedBLEBeacon
+from app.models.beacon_secret import BeaconSecret as BeaconSecret

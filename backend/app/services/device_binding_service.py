@@ -1,9 +1,10 @@
 # backend\app\services\device_binding_service.py
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
+from sqlalchemy.exc import IntegrityError
 
 from app.models.device import Device
 from app.models.user import User
+from app.core.errors import ApiError, ErrorCode
 
 
 class DeviceBindingService:
@@ -11,9 +12,11 @@ class DeviceBindingService:
         self.db = db
 
     def bind_device(self, user: User, device_id: str):
+        device_id = device_id.strip().lower()
+
         existing_device = (
             self.db.query(Device)
-            .filter(Device.user_id == user.id, Device.is_active == True)
+            .filter(Device.user_id == user.id, Device.is_active )
             .first()
         )
 
@@ -24,8 +27,23 @@ class DeviceBindingService:
                 device_id=device_id,
                 is_active=True,
             )
+
             self.db.add(device)
-            self.db.commit()
+
+            try:
+                self.db.commit()
+            except IntegrityError:
+                self.db.rollback()
+
+                raise ApiError(
+                    ErrorCode.DEVICE_BINDING_CONFLICT,
+                    (
+                        "This account is already registered on another device. "
+                        "Please contact the academic office to reset device access."
+                    ),
+                    status_code=409,
+                )
+
             return
 
         # Case 2: Same device → allow
@@ -33,10 +51,11 @@ class DeviceBindingService:
             return
 
         # Case 3: Different device → BLOCK
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
+        raise ApiError(
+            ErrorCode.DEVICE_BINDING_CONFLICT,
+            (
                 "This account is already registered on another device. "
                 "Please contact the academic office to reset device access."
             ),
+            status_code=403,
         )

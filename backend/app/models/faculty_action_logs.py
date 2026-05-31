@@ -1,7 +1,7 @@
 # backend\app\models\faculty_action_logs.py
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.sql import func
-from app.db.base import Base
+from app.db.base_class import Base
 
 
 class FacultyActionLog(Base):

@@ -16,9 +16,24 @@ class AttendanceBleEvidence(Base):
         Integer,
         ForeignKey("attendance.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     ble_payload = Column(JSON, nullable=False)
+
+    # Future-proof forensic/replay-analysis support fields.
+    # Kept nullable to avoid breaking existing flows and migrations.
+    device_id = Column(Integer, nullable=True)
+
+    client_timestamp = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    server_received_timestamp = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
 
     created_at = Column(
         DateTime(timezone=True),

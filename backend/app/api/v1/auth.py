@@ -7,8 +7,9 @@ from app.core.jwt import create_access_token
 from app.db.session import get_db
 from app.models.user import User
 from app.models.device import Device
-from app.models.session import Session as UserSession
+from app.models.auth_session import AuthSession
 from app.services.device_binding_service import DeviceBindingService
+from app.core.auth import get_current_user
 
 router = APIRouter(tags=["Auth"])
 
@@ -16,9 +17,7 @@ router = APIRouter(tags=["Auth"])
 @router.post("/login", response_model=TokenResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = (
-        db.query(User)
-        .filter(User.email == data.email, User.is_active == True)
-        .first()
+        db.query(User).filter(User.email == data.email, User.is_active ).first()
     )
 
     if not user:
@@ -43,7 +42,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         .filter(
             Device.user_id == user.id,
             Device.device_id == data.device_uuid,
-            Device.is_active == True,
+            Device.is_active ,
         )
         .first()
     )
@@ -54,15 +53,16 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
             detail="Bound device not found",
         )
 
-    # Kill previous sessions (faculty-based, matches DB)
-    db.query(UserSession).filter(
-        UserSession.faculty_id == user.id,
-        UserSession.is_active == True,
+    # Kill previous auth sessions
+    db.query(AuthSession).filter(
+        AuthSession.user_id == user.id,
+        AuthSession.is_active ,
     ).update({"is_active": False})
 
     # Create new session
-    session = UserSession(
-        faculty_id=user.id,
+    session = AuthSession(
+        user_id=user.id,
+        device_id=device.id,
         is_active=True,
     )
 
@@ -75,4 +75,21 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         "access_token": access_token,
         "token_type": "bearer",
         "role": user.role,
+    }
+
+
+@router.post("/logout")
+def logout(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db.query(AuthSession).filter(
+        AuthSession.user_id == current_user.id,
+        AuthSession.is_active ,
+    ).update({"is_active": False})
+
+    db.commit()
+
+    return {
+        "message": "Logged out successfully",
     }
