@@ -20,13 +20,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final response = await _repository.login(
-        LoginRequest(email: email, password: password),
-      );
-
-      await AppBootstrap.localStorageService
-          .saveAuthToken(response.accessToken);
-
+      // Device ID must be resolved BEFORE login so it can be sent to backend
       final deviceIdService = DeviceIdService(
         AppBootstrap.localStorageService,
       );
@@ -37,6 +31,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'DEVICE ID USED: $deviceId',
         name: 'AuthNotifier',
       );
+
+      final response = await _repository.login(
+        LoginRequest(
+          email: email,
+          password: password,
+          deviceUuid: deviceId,
+        ),
+      );
+
+      await AppBootstrap.localStorageService
+          .saveAuthToken(response.accessToken);
 
       final deviceBindingService = DeviceBindingApiService(
         AppBootstrap.apiClient,

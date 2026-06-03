@@ -12,34 +12,59 @@ from app.core.auth import get_current_user
 from app.core.dependencies import require_faculty
 from app.core.domain_rules import (
     ensure_student_enrolled,
-    ensure_attendance_open,
     ensure_faculty_owns_classroom,
 )
 from app.core.errors import ApiError, ErrorCode
+from app.core.constants.roles import UserRole
 from app.models.user import User
 from app.models.attendance_session import AttendanceSession
 from app.models.attendance import AttendanceAttempt
 from app.models.attendance_ble_evidence import AttendanceBleEvidence
 from app.models.attendance_ble_nonce import AttendanceBLENonce
-from app.schemas.attendance import AttendanceAttemptRequest
+from app.schemas.attendance import (
+    AttendanceAttemptRequest,
+    AttendanceJoinResponse,
+    AttendanceSubmitResponse,
+    CloseAttendanceResponse,
+)
 from app.services.ble_security_service import (
     validate_ble_attendance,
+)
+from app.services.session_cleanup_service import (
+    deactivate_expired_sessions,
 )
 
 router = APIRouter(tags=["Attendance"])
 logger = logging.getLogger(__name__)
 
 
-@router.post("/attempt")
+@router.post(
+    "/attempt",
+    response_model=AttendanceSubmitResponse,
+)
 def submit_attendance(
     data: AttendanceAttemptRequest,
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
+    deactivate_expired_sessions(db)
+
+    now = datetime.now(timezone.utc)
+
+    try:
+        session_id = int(data.session_id)
+    except (TypeError, ValueError):
+        raise ApiError(
+            ErrorCode.INVALID_SESSION,
+            "Invalid attendance session",
+            status_code=400,
+        )
+
     session = (
         db.query(AttendanceSession)
         .filter(
-            AttendanceSession.is_active ,
+            AttendanceSession.id == session_id,
         )
         .with_for_update()
         .first()
@@ -47,34 +72,30 @@ def submit_attendance(
 
     if not session:
         raise ApiError(
-            ErrorCode.CLASS_NOT_ACTIVE,
-            "No active classroom",
+            ErrorCode.INVALID_SESSION,
+            "Attendance session not found",
             status_code=404,
         )
 
-    # Validate client-provided session_id against active session
-    # to prevent inconsistent or spoofed attendance submissions.
-    try:
-        session_id = int(data.session_id)
-    except (TypeError, ValueError):
+    if session.closed_at is not None:
         raise ApiError(
-            ErrorCode.SESSION_MISSING,
-            "Invalid attendance session",
-            status_code=400,
+            ErrorCode.SESSION_CLOSED,
+            "Attendance session is closed",
+            status_code=403,
         )
 
-    if session_id != session.id:
+    if session.expires_at <= now:
         raise ApiError(
-            ErrorCode.SESSION_MISSING,
-            "Invalid attendance session",
-            status_code=400,
+            ErrorCode.SESSION_EXPIRED,
+            "Attendance session expired",
+            status_code=403,
         )
 
     if not session.is_active:
         raise ApiError(
-            ErrorCode.CLASS_NOT_ACTIVE,
-            "Attendance session closed",
-            status_code=400,
+            ErrorCode.SESSION_CLOSED,
+            "Attendance session inactive",
+            status_code=403,
         )
 
     logger.info(
@@ -90,38 +111,41 @@ def submit_attendance(
     )
 
     try:
-        with db.begin():
 
-            attendance = AttendanceAttempt(
-                student_id=current_user.id,
-                classroom_id=session.classroom_id,
+        attendance = AttendanceAttempt(
+            student_id=current_user.id,
+            classroom_id=session.classroom_id,
+            session_id=session.id,
+            status=status,
+        )
+
+        db.add(attendance)
+        db.flush()
+
+        for _, beacon in data.ble_evidence.per_beacon.items():
+
+            nonce_record = AttendanceBLENonce(
                 session_id=session.id,
-                status=status,
+                nonce=beacon.nonce,
             )
 
-            db.add(attendance)
-            db.flush()
+            db.add(nonce_record)
 
-            for _, beacon in data.ble_evidence.per_beacon.items():
+        if data.ble_evidence is not None:
 
-                nonce_record = AttendanceBLENonce(
-                    session_id=session.id,
-                    nonce=beacon.nonce,
-                )
+            ble_row = AttendanceBleEvidence(
+                attendance_id=attendance.id,
+                ble_payload=data.ble_evidence.dict(),
+            )
 
-                db.add(nonce_record)
+            db.add(ble_row)
 
-            if data.ble_evidence is not None:
-                ble_row = AttendanceBleEvidence(
-                    attendance_id=attendance.id,
-                    ble_payload=data.ble_evidence.dict(),
-                )
-
-                db.add(ble_row)
+        db.commit()
 
         db.refresh(attendance)
 
     except IntegrityError:
+
         db.rollback()
 
         raise ApiError(
@@ -130,22 +154,28 @@ def submit_attendance(
             status_code=409,
         )
 
+    except Exception:
+
+        db.rollback()
+        raise
+
     return {
         "status": "accepted",
         "session_id": session.id,
     }
 
 
-@router.post("/join")
+@router.post(
+    "/join",
+    response_model=AttendanceJoinResponse,
+)
 def join_attendance(
     classroom_id: int,
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
 
-    ensure_attendance_open(db, classroom_id)
-
-    if current_user.role != "student":
+    if current_user.role != UserRole.STUDENT.value:
         raise ApiError(
             ErrorCode.NOT_AUTHORIZED,
             "Only students may join attendance",
@@ -154,11 +184,17 @@ def join_attendance(
 
     ensure_student_enrolled(db, current_user.id, classroom_id)
 
+    deactivate_expired_sessions(db)
+
+    now = datetime.now(timezone.utc)
+
     faculty_session = (
         db.query(AttendanceSession)
         .filter(
             AttendanceSession.classroom_id == classroom_id,
-            AttendanceSession.is_active ,
+            AttendanceSession.is_active == True,
+            AttendanceSession.closed_at.is_(None),
+            AttendanceSession.expires_at > now,
         )
         .with_for_update()
         .first()
@@ -237,7 +273,11 @@ def get_classroom_attendance(
     ]
 
 
-@router.post("/close/{classroom_id}", dependencies=[Depends(require_faculty)])
+@router.post(
+    "/close/{classroom_id}",
+    response_model=CloseAttendanceResponse,
+    dependencies=[Depends(require_faculty)],
+)
 def close_attendance(
     classroom_id: int,
     db: DBSession = Depends(get_db),
@@ -246,11 +286,17 @@ def close_attendance(
 
     ensure_faculty_owns_classroom(db, current_user.id, classroom_id)
 
+    deactivate_expired_sessions(db)
+
+    now = datetime.now(timezone.utc)
+
     faculty_session = (
         db.query(AttendanceSession)
         .filter(
             AttendanceSession.classroom_id == classroom_id,
-            AttendanceSession.is_active ,
+            AttendanceSession.is_active == True,
+            AttendanceSession.closed_at.is_(None),
+            AttendanceSession.expires_at > now,
         )
         .with_for_update()
         .first()
@@ -266,10 +312,11 @@ def close_attendance(
     faculty_session.is_active = False
     faculty_session.closed_at = datetime.now(timezone.utc)
 
-    db.query(AttendanceAttempt).filter(
-        AttendanceAttempt.classroom_id == classroom_id
-    ).update({"is_locked": True})
-
     db.commit()
 
-    return {"status": "attendance closed"}
+    return {
+        "status": "closed",
+        "classroom_id": classroom_id,
+        "session_id": faculty_session.id,
+        "closed_at": faculty_session.closed_at,
+    }

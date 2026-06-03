@@ -1,10 +1,16 @@
-# backend\app\core\domain_rules.py
+# backend/app/core/domain_rules.py
+
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
-from app.models.attendance import AttendanceAttempt
+
 from app.models.enrollment import Enrollment
 from app.models.attendance_session import AttendanceSession
 from app.models.classroom import Classroom
 from app.core.errors import ApiError, ErrorCode
+from app.services.session_cleanup_service import (
+    deactivate_expired_sessions,
+)
 
 
 def ensure_student_enrolled(db: Session, student_id: int, classroom_id: int):
@@ -23,11 +29,18 @@ def ensure_student_enrolled(db: Session, student_id: int, classroom_id: int):
 
 
 def ensure_class_active(db: Session, classroom_id: int):
+
+    deactivate_expired_sessions(db)
+
+    now = datetime.now(timezone.utc)
+
     session = (
         db.query(AttendanceSession)
         .filter(
             AttendanceSession.classroom_id == classroom_id,
-            AttendanceSession.is_active ,
+            AttendanceSession.is_active == True,
+            AttendanceSession.closed_at.is_(None),
+            AttendanceSession.expires_at > now,
         )
         .first()
     )
@@ -40,24 +53,6 @@ def ensure_class_active(db: Session, classroom_id: int):
         )
 
     return session
-
-
-def ensure_attendance_open(db: Session, classroom_id: int):
-    locked = (
-        db.query(AttendanceAttempt)
-        .filter(
-            AttendanceAttempt.classroom_id == classroom_id,
-            AttendanceAttempt.is_locked ,
-        )
-        .first()
-    )
-
-    if locked:
-        raise ApiError(
-            ErrorCode.ATTENDANCE_CLOSED,
-            "Attendance is already closed",
-            status_code=403,
-        )
 
 
 def ensure_faculty_owns_classroom(db: Session, faculty_id: int, classroom_id: int):

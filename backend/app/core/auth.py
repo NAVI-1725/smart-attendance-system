@@ -1,4 +1,5 @@
-# backend\app\core\auth.py
+# backend/app/core/auth.py
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
@@ -52,7 +53,7 @@ def get_current_user(
         db.query(AuthSession)
         .filter(
             AuthSession.user_id == user.id,
-            AuthSession.is_active ,
+            AuthSession.is_active == True,
         )
         .first()
     )

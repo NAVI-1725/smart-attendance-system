@@ -1,4 +1,5 @@
-# backend\app\core\dependencies.py
+# backend/app/core/dependencies.py
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
@@ -7,20 +8,21 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.permissions import Permission
-from app.models.user import User, UserRole
+from app.models.user import User
+from app.core.constants.roles import UserRole
 
 security = HTTPBearer()
 
 ROLE_PERMISSIONS = {
-    UserRole.admin: {
+    UserRole.ADMIN.value: {
         Permission.manage_system,
         Permission.manage_faculty,
         Permission.take_attendance,
     },
-    UserRole.faculty: {
+    UserRole.FACULTY.value: {
         Permission.take_attendance,
     },
-    UserRole.student: set(),
+    UserRole.STUDENT.value: set(),
 }
 
 
@@ -52,10 +54,10 @@ def get_current_user(
         )
 
     # Normalize role coming from DB (DB stores uppercase like "FACULTY")
-    # Safest option: coerce into UserRole enum if needed
+    # Safest option: coerce into canonical lowercase string if needed
     if isinstance(user.role, str):
         try:
-            user.role = UserRole[user.role.lower()]
+            user.role = user.role.lower()
         except Exception:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -66,7 +68,7 @@ def get_current_user(
 
 
 def require_faculty(current_user=Depends(get_current_user)):
-    if current_user.role != UserRole.faculty:
+    if current_user.role != UserRole.FACULTY.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Faculty access required",
@@ -75,7 +77,7 @@ def require_faculty(current_user=Depends(get_current_user)):
 
 
 def require_admin(current_user=Depends(get_current_user)):
-    if current_user.role != UserRole.admin:
+    if current_user.role != UserRole.ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",

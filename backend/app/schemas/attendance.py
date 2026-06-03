@@ -1,4 +1,6 @@
-# backend\app\schemas\attendance.py
+# backend/app/schemas/attendance.py
+
+from datetime import datetime
 from typing import Dict
 from pydantic import BaseModel
 
@@ -28,3 +30,19 @@ class BleEvidence(BaseModel):
 class AttendanceAttemptRequest(BaseModel):
     session_id: str
     ble_evidence: BleEvidence
+
+
+class AttendanceJoinResponse(BaseModel):
+    status: str
+
+
+class AttendanceSubmitResponse(BaseModel):
+    status: str
+    session_id: int
+
+
+class CloseAttendanceResponse(BaseModel):
+    status: str
+    classroom_id: int
+    session_id: int
+    closed_at: datetime

@@ -1,0 +1,60 @@
+{
+  "prompt": {
+    "role": "system",
+    "instructions": "You are a Named Entity Recognition (NER) extraction assistant. Carefully read the uploaded document, including text, tables, figures, and captions. Extract key named entities strictly from the document content only.\n\nEntity types to extract (if present):\n- PERSON\n- ORGANIZATION\n- LOCATION\n- DATE\n- TIME\n- MONEY\n- PERCENTAGE\n- LAW / POLICY\n- PRODUCT / TECHNOLOGY\n- EVENT\n\nFor each extracted entity, provide:\n- entity_text: exact text as it appears in the document\n- entity_type: one of the predefined types\n- context: brief explanation of how the entity is used in the document\n- source: page number, section name, table, or figure where the entity appears\n\nRules:\n- Do NOT infer or use external knowledge.\n- If an entity type is not present, return an empty list for that type.\n- Preserve original casing and wording from the document.\n- Output the final response strictly in JSON format."
+  },
+  "output": {
+    "document_metadata": {
+      "title": "As per uploaded document",
+      "analysis_scope": "NER extracted only from the uploaded document"
+    },
+    "named_entities": {
+      "PERSON": [
+        {
+          "entity_text": "Author Name",
+          "context": "Listed as an author of the document",
+          "source": "Page 1 – Title Section"
+        }
+      ],
+      "ORGANIZATION": [
+        {
+          "entity_text": "Organization Name",
+          "context": "Affiliated institution mentioned in the document",
+          "source": "Page 1 – Author Affiliation"
+        }
+      ],
+      "LOCATION": [
+        {
+          "entity_text": "Location Name",
+          "context": "Geographical location referenced in the study or context",
+          "source": "Page 2 – Background Section"
+        }
+      ],
+      "DATE": [
+        {
+          "entity_text": "2021",
+          "context": "Year associated with the study or publication",
+          "source": "Page 1 – Publication Details"
+        }
+      ],
+      "TIME": [],
+      "MONEY": [],
+      "PERCENTAGE": [
+        {
+          "entity_text": "35%",
+          "context": "Percentage value reported as part of results",
+          "source": "Page 5 – Results Section"
+        }
+      ],
+      "LAW_POLICY": [],
+      "PRODUCT_TECHNOLOGY": [
+        {
+          "entity_text": "Technology Name",
+          "context": "Tool or technology discussed in the methodology",
+          "source": "Page 3 – Methodology Section"
+        }
+      ],
+      "EVENT": []
+    }
+  }
+}
