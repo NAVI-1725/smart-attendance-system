@@ -1,5 +1,3 @@
-# backend/app/api/v1/sessions.py
-
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
@@ -7,7 +5,10 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.db.session import get_db
 from app.core.auth import get_current_user
-from app.core.domain_rules import ensure_faculty_owns_classroom
+from app.core.domain_rules import (
+    ensure_faculty_owns_classroom,
+    ensure_faculty_teaches_course,
+)
 from app.core.errors import ApiError, ErrorCode
 from app.core.constants.roles import UserRole
 from app.models.attendance_session import AttendanceSession
@@ -47,6 +48,12 @@ def start_session(
         request.classroom_id,
     )
 
+    ensure_faculty_teaches_course(
+        db,
+        current_user.id,
+        request.course_id,
+    )
+
     deactivate_expired_sessions(db)
 
     now = datetime.now(timezone.utc)
@@ -73,6 +80,7 @@ def start_session(
 
     session = AttendanceSession(
         faculty_id=current_user.id,
+        course_id=request.course_id,
         classroom_id=request.classroom_id,
         is_active=True,
         started_at=now,
@@ -120,6 +128,7 @@ def get_active_session(
 
     return {
         "session_id": session.id,
+        "course_id": session.course_id,
         "classroom_id": session.classroom_id,
         "expires_at": session.expires_at,
         "duration_minutes": session.duration_minutes,

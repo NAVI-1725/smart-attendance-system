@@ -1,9 +1,11 @@
-# backend\app\services\session_cleanup_service.py
+# backend/app/services/session_cleanup_service.py
+
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.models.attendance_session import AttendanceSession
+from app.models.enums import AttendanceSessionStatus
 
 
 def deactivate_expired_sessions(db: Session):
@@ -23,6 +25,7 @@ def deactivate_expired_sessions(db: Session):
     for session in expired_sessions:
         session.is_active = False
         session.closed_at = now
+        session.status = AttendanceSessionStatus.EXPIRED
 
     if expired_sessions:
         db.commit()

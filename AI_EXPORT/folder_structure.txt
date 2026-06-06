@@ -1,0 +1,12 @@
+FOLDER STRUCTURE
+============================================================
+
+└── backend
+    └── app
+        ├── api
+            └── v1
+                ├── attendance.py
+                └── sessions.py
+        └── core
+            ├── domain_rules.py
+            └── errors.py

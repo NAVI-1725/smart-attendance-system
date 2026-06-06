@@ -1,4 +1,7 @@
 # backend\app\core\config.py
+
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
 from pydantic import Field
 
@@ -29,7 +32,9 @@ class Settings(BaseSettings):
     PORT: int = Field(default=8000)
 
     class Config:
-        env_file = ".env"
+        env_file = (
+            Path(__file__).resolve().parents[2] / ".env"
+        )
         extra = "forbid"
 
 

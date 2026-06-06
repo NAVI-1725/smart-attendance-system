@@ -1,0 +1,54 @@
+[2026-06-05 22:06:35] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/app/services/session_service.py
+[2026-06-05 22:06:35] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/app/services/attendance_service.py
+[2026-06-05 22:06:52] [INFO] Export complete: 19 files, 1 parts
+[2026-06-05 22:08:44] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/app/services/session_service.py
+[2026-06-05 22:08:54] [INFO] Export complete: 9 files, 1 parts
+[2026-06-05 22:13:11] [INFO] Export complete: 3 files, 1 parts
+[2026-06-05 22:18:27] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\schemas/session.py
+[2026-06-05 22:18:27] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/app/models/init.py
+[2026-06-05 22:18:29] [INFO] Export complete: 5 files, 1 parts
+[2026-06-05 22:20:05] [INFO] Export complete: 1 files, 1 parts
+[2026-06-05 22:40:51] [INFO] Export complete: 10 files, 1 parts
+[2026-06-05 22:41:18] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/app/services/session_service.py
+[2026-06-05 22:41:22] [INFO] Export complete: 6 files, 1 parts
+[2026-06-05 22:50:56] [INFO] Export complete: 13 files, 1 parts
+[2026-06-05 22:56:54] [INFO] Export complete: 1 files, 1 parts
+[2026-06-05 23:22:34] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/app/services/auth_service.py
+[2026-06-05 23:22:39] [INFO] Export complete: 1 files, 1 parts
+[2026-06-05 23:25:24] [INFO] Export complete: 1 files, 1 parts
+[2026-06-05 23:27:15] [INFO] Export complete: 3 files, 1 parts
+[2026-06-05 23:31:42] [INFO] Export complete: 2 files, 1 parts
+[2026-06-05 23:40:17] [INFO] Export complete: 4 files, 1 parts
+[2026-06-05 23:43:54] [INFO] Export complete: 1 files, 1 parts
+[2026-06-05 23:45:42] [INFO] Export complete: 1 files, 1 parts
+[2026-06-05 23:47:02] [INFO] Export complete: 3 files, 1 parts
+[2026-06-05 23:47:43] [INFO] Export complete: 1 files, 1 parts
+[2026-06-05 23:56:29] [INFO] Export complete: 3 files, 1 parts
+[2026-06-05 23:57:04] [INFO] Export complete: 3 files, 1 parts
+[2026-06-06 00:00:47] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/api/v1/router.py
+[2026-06-06 00:02:18] [INFO] Export complete: 1 files, 1 parts
+[2026-06-06 00:05:00] [INFO] Export complete: 3 files, 1 parts
+[2026-06-06 11:15:51] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/app/api/v1/attendance_session.py
+[2026-06-06 11:15:54] [INFO] Export complete: 2 files, 1 parts
+[2026-06-06 11:16:21] [INFO] Export complete: 7 files, 1 parts
+[2026-06-06 11:17:31] [INFO] Export complete: 7 files, 1 parts
+[2026-06-06 11:17:33] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\attendance session start endpoint file
+[2026-06-06 11:17:33] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\attendance session active endpoint file
+[2026-06-06 11:17:33] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\course enrollment model
+[2026-06-06 11:17:33] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\classroom model
+[2026-06-06 11:17:33] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\attendance_session model
+[2026-06-06 11:17:33] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\seed/demo data strategy
+[2026-06-06 11:17:37] [INFO] Export complete: 2 files, 1 parts
+[2026-06-06 11:20:41] [INFO] Export complete: 4 files, 1 parts
+[2026-06-06 11:21:16] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/schemas/auth.py
+[2026-06-06 11:21:16] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/core/jwt.py
+[2026-06-06 11:21:19] [INFO] Export complete: 1 files, 1 parts
+[2026-06-06 11:22:32] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/schemas/auth.py
+[2026-06-06 11:22:32] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\backend/core/jwt.py
+[2026-06-06 11:22:51] [INFO] Export complete: 8 files, 1 parts
+[2026-06-06 11:31:56] [INFO] Export complete: 4 files, 1 parts
+[2026-06-06 11:44:46] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\Next file:
+[2026-06-06 11:44:46] [ERROR] Path not found: C:\Users\kumar\smart-attendance-system\Then:
+[2026-06-06 11:44:48] [INFO] Export complete: 2 files, 1 parts
+[2026-06-06 11:46:22] [INFO] Export complete: 2 files, 1 parts
+[2026-06-06 11:47:35] [INFO] Export complete: 4 files, 1 parts

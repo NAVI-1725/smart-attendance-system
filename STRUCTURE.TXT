@@ -1,0 +1,168 @@
+📁 smart-attendance-system/
+    📄 .env
+    📁 .git/  → (skipped: irrelevant)
+    📄 .gitignore
+    📁 .venv/  → (skipped: irrelevant)
+    📁 analytics/
+    📁 backend/
+        📄 .env
+        📁 .pytest_cache/
+        📄 .ruff.toml
+        📁 .ruff_cache/
+        📁 alembic/
+        📄 alembic.ini
+        📁 app/
+            📁 __pycache__/  → (skipped: irrelevant)
+            📁 api/
+                📁 v1/
+                    📄 __init__.py
+                    📁 __pycache__/  → (skipped: irrelevant)
+                    📄 admin.py
+                    📄 api.py
+                    📄 attendance.py
+                    📄 auth.py
+                    📄 beacons.py
+                    📄 classrooms.py
+                    📄 devices.py
+                    📄 faculty.py
+                    📄 router.py
+                    📄 sessions.py
+            📁 config/
+            📁 core/
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 auth.py
+                📄 config.py
+                📁 constants/
+                    📄 __init__.py
+                    📁 __pycache__/  → (skipped: irrelevant)
+                    📄 roles.py
+                    📄 security_constants.py
+                📄 database.py
+                📄 dependencies.py
+                📄 domain_rules.py
+                📄 errors.py
+                📄 jwt.py
+                📄 security.py
+            📁 db/
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 base.py
+                📄 base_class.py
+                📄 session.py
+            📁 exceptions/
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 ble_exceptions.py
+            📄 main.py  (→ main application logic)
+            📁 middleware/
+            📁 models/
+                📄 __init__.py
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 attendance.py
+                📄 attendance_ble_evidence.py
+                📄 attendance_ble_nonce.py
+                📄 attendance_session.py
+                📄 auth_session.py
+                📄 beacon_secret.py
+                📄 classroom.py
+                📄 device.py
+                📄 enrollment.py
+                📄 faculty_action_logs.py
+                📄 permissions.py
+                📄 session.py
+                📄 trusted_ble_beacon.py
+                📄 user.py
+            📁 routers/
+            📁 schemas/
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 attendance.py
+                📄 auth.py
+                📄 classroom.py
+                📄 device.py
+                📄 faculty.py
+                📄 faculty_resolution.py
+                📁 routers/
+                    📄 __init__.py
+                    📁 __pycache__/  → (skipped: irrelevant)
+                📄 session.py
+                📄 trusted_beacon.py
+            📁 services/
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 attendance_flagging.py
+                📄 beacon_registry_service.py
+                📄 beacon_signature_service.py
+                📄 ble_security_service.py
+                📄 device_binding_service.py
+                📄 session_cleanup_service.py
+            📁 utils/
+        📁 backend/
+        📄 pytest.ini
+        📄 requirements.txt
+        📁 tests/
+            📁 integration/
+            📁 scenarios/
+            📁 security/
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 conftest.py
+                📄 test_ble_security.py
+                📄 test_replay_protection.py
+                📄 test_signature_validation.py
+            📁 unit/
+        📁 venv/
+    📁 cv-audit-module/
+        📁 models/
+        📁 src/
+        📁 tests/
+            📁 sample_images/
+    📁 database/
+        📁 backups/
+        📁 migrations/
+        📁 schema/
+        📁 seeds/
+    📁 deployment/
+        📁 docker/
+        📁 kubernetes/
+        📁 scripts/
+    📁 documentation/
+        📁 api/
+        📁 design/
+            📁 sequence_diagrams/
+        📁 research/
+        📁 srs/
+        📁 testing/
+            📁 test_results/
+        📁 user_manuals/
+        📁 viva/
+    📁 faculty-dashboard/
+    📁 iot-beacon/
+        📄 .gitignore
+        📁 .pio/
+        📁 .vscode/  → (skipped: irrelevant)
+        📁 include/
+            📄 beacon_config.h
+            📄 crypto_utils.h
+        📄 platformio.ini
+        📁 src/
+            📄 crypto_utils.cpp
+            📄 main.cpp
+    📁 mobile_app/
+    📁 scanner/
+        📁 ble_scanner_service/
+            📄 __init__.py
+            📁 __pycache__/  → (skipped: irrelevant)
+            📄 main.py  (→ main application logic)
+            📄 models.py
+            📄 parser.py
+            📄 scanner.py
+            📄 service.py
+            📄 validate_main.py
+            📄 validator.py
+        📄 requirements.txt
+    📁 scripts/
+        📁 data/
+        📁 monitoring/
+        📁 setup/
+    📄 structure.py
+    📁 testing/
+        📁 integration/
+        📁 performance/
+        📁 reports/
+        📁 scenarios/

@@ -1,11 +1,13 @@
-# backend\app\api\v1\faculty.py
+# backend/app/api/v1/faculty.py
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.dependencies import get_current_user, get_db, require_faculty
 from app.core.domain_rules import ensure_faculty_owns_classroom
-from app.models.attendance import AttendanceAttempt, AttendanceStatus
+from app.models.attendance import AttendanceAttempt
+from app.models.enums import AttendanceStatus
 from app.models.faculty_action_logs import FacultyActionLog
 from app.models.attendance_session import AttendanceSession
 from app.schemas.faculty import AttendanceSummaryResponse
@@ -60,7 +62,7 @@ def resolve_attendance(
     original_status = attendance.status
 
     # 5️⃣ Apply resolution
-    attendance.status = AttendanceStatus(data.new_status)
+    attendance.status = data.new_status
 
     # 6️⃣ Immutable audit log (exam-critical)
     log = FacultyActionLog(

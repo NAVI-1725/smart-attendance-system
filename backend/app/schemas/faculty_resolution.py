@@ -1,14 +1,11 @@
 # backend\app\schemas\faculty_resolution.py
+
 from pydantic import BaseModel, Field
-from enum import Enum
 
-
-class ResolutionStatus(str, Enum):
-    CONFIRMED = "CONFIRMED"
-    ABSENT = "ABSENT"
+from app.models.enums import AttendanceStatus
 
 
 class FacultyResolutionRequest(BaseModel):
     attendance_id: int
-    new_status: ResolutionStatus
+    new_status: AttendanceStatus
     reason: str = Field(..., min_length=10)

@@ -1,15 +1,11 @@
 # backend/app/models/attendance.py
 
-from enum import Enum
 from sqlalchemy import Column, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import Enum as SqlEnum
+
 from app.db.base_class import Base
-
-
-class AttendanceStatus(str, Enum):
-    CONFIRMED = "CONFIRMED"
-    FLAGGED = "FLAGGED"
+from app.models.enums import AttendanceStatus
 
 
 class AttendanceAttempt(Base):
@@ -43,7 +39,10 @@ class AttendanceAttempt(Base):
 
     # STEP 3.1 — Attendance Status ENUM Enforcement
     status = Column(
-        SqlEnum(AttendanceStatus),
+        SqlEnum(
+            AttendanceStatus,
+            name="attendance_status",
+        ),
         nullable=False,
     )
 

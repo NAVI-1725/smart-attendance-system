@@ -1,0 +1,12 @@
+{
+  "last_root_directory": "",
+  "theme": "light",
+  "chunk_tokens": 25000,
+  "ai_preset": "Generic",
+  "skip_git": true,
+  "skip_node_modules": true,
+  "skip_pycache": true,
+  "skip_venv": true,
+  "skip_images": true,
+  "skip_binaries": true
+}

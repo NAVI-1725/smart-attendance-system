@@ -1,8 +1,9 @@
-# backend/tests/security/conftest.py
+# backend\tests\security\conftest.py
 import hashlib
 import hmac
 import time
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -16,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
 from app.models.user import User
+from app.models.course import Course
 from app.models.classroom import Classroom
 from app.models.attendance_session import AttendanceSession
 from app.models.trusted_ble_beacon import TrustedBLEBeacon
@@ -77,10 +79,27 @@ def student_user(db):
 
 
 @pytest.fixture()
+def course(db):
+    course = Course(
+        course_code="CSE101",
+        course_name="Computer Science",
+    )
+
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+
+    return course
+
+
+@pytest.fixture()
 def classroom(db, faculty_user):
     classroom = Classroom(
         name="AP Classroom",
         faculty_id=faculty_user.id,
+        latitude=16.5062,
+        longitude=80.6480,
+        gps_radius_meters=50,
     )
     db.add(classroom)
     db.commit()
@@ -89,15 +108,25 @@ def classroom(db, faculty_user):
 
 
 @pytest.fixture()
-def attendance_session(db, faculty_user, classroom):
+def attendance_session(
+    db,
+    faculty_user,
+    classroom,
+    course,
+):
     session = AttendanceSession(
         faculty_id=faculty_user.id,
+        course_id=course.id,
         classroom_id=classroom.id,
         is_active=True,
+        expires_at=datetime.now(timezone.utc)
+        + timedelta(minutes=30),
     )
+
     db.add(session)
     db.commit()
     db.refresh(session)
+
     return session
 
 
@@ -191,7 +220,12 @@ def signed_ble_evidence(classroom, beacon_secret):
         signature=signature,
     )
 
-    payload_2 = f"AP_BEACON_002|" f"{nonce}|" f"{timestamp}|" f"{classroom.id}"
+    payload_2 = (
+        f"AP_BEACON_002|"
+        f"{nonce}|"
+        f"{timestamp}|"
+        f"{classroom.id}"
+    )
 
     signature_2 = hmac.new(
         beacon_secret["secret_2"].secret_key.encode(),

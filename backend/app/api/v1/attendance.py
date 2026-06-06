@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.core.auth import get_current_user
 from app.core.dependencies import require_faculty
 from app.core.domain_rules import (
-    ensure_student_enrolled,
+    ensure_student_enrolled_in_course,
     ensure_faculty_owns_classroom,
 )
 from app.core.errors import ApiError, ErrorCode
@@ -21,6 +21,10 @@ from app.models.attendance_session import AttendanceSession
 from app.models.attendance import AttendanceAttempt
 from app.models.attendance_ble_evidence import AttendanceBleEvidence
 from app.models.attendance_ble_nonce import AttendanceBLENonce
+from app.models.enums import (
+    AttendanceStatus,
+    AttendanceSessionStatus,
+)
 from app.schemas.attendance import (
     AttendanceAttemptRequest,
     AttendanceJoinResponse,
@@ -182,8 +186,6 @@ def join_attendance(
             status_code=403,
         )
 
-    ensure_student_enrolled(db, current_user.id, classroom_id)
-
     deactivate_expired_sessions(db)
 
     now = datetime.now(timezone.utc)
@@ -207,6 +209,12 @@ def join_attendance(
             status_code=404,
         )
 
+    ensure_student_enrolled_in_course(
+        db,
+        current_user.id,
+        faculty_session.course_id,
+    )
+
     # Student authentication is already validated via JWT + get_current_user
 
     existing = (
@@ -229,7 +237,7 @@ def join_attendance(
         student_id=current_user.id,
         classroom_id=classroom_id,
         session_id=faculty_session.id,
-        status="CONFIRMED",
+        status=AttendanceStatus.CONFIRMED,
     )
 
     db.add(attendance)
@@ -311,6 +319,7 @@ def close_attendance(
 
     faculty_session.is_active = False
     faculty_session.closed_at = datetime.now(timezone.utc)
+    faculty_session.status = AttendanceSessionStatus.CLOSED
 
     db.commit()
 

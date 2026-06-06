@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 
 class StartSessionRequest(BaseModel):
+    course_id: int
     classroom_id: int
     duration_minutes: int = 10
 
@@ -18,6 +19,7 @@ class SessionResponse(BaseModel):
 
 class ActiveSessionResponse(BaseModel):
     session_id: int
+    course_id: int
     classroom_id: int
     expires_at: datetime
     duration_minutes: int
