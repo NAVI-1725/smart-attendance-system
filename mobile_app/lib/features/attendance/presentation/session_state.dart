@@ -1,35 +1,36 @@
-// mobile_app\lib\features\attendance\presentation\session_state.dart
+// mobile_app/lib/features/attendance/presentation/session_state.dart
+
 import '../domain/session.dart';
 
 class SessionState {
-  final Session? activeSession;
+  final List<Session> activeSessions;
   final bool isLoading;
   final String? error;
 
   const SessionState({
-    this.activeSession,
+    this.activeSessions = const [],
     this.isLoading = false,
     this.error,
   });
 
   factory SessionState.initial() {
     return const SessionState(
-      activeSession: null,
+      activeSessions: [],
       isLoading: false,
     );
   }
 
   SessionState copyWith({
-    Session? activeSession,
+    List<Session>? activeSessions,
     bool? isLoading,
     String? error,
   }) {
     return SessionState(
-      activeSession: activeSession,
+      activeSessions: activeSessions ?? this.activeSessions,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
   }
 
-  bool get hasActiveSession => activeSession != null;
+  bool get hasSessions => activeSessions.isNotEmpty;
 }

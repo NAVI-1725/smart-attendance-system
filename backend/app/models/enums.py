@@ -40,3 +40,16 @@ class AttendanceSessionStatus(str, Enum):
     ACTIVE = "ACTIVE"
     CLOSED = "CLOSED"
     EXPIRED = "EXPIRED"
+
+
+class GPSValidationResult(str, Enum):
+    VALID = "VALID"
+    OUTSIDE_GEOFENCE = "OUTSIDE_GEOFENCE"
+    LOW_ACCURACY = "LOW_ACCURACY"
+    STALE_LOCATION = "STALE_LOCATION"
+    MISSING_LOCATION = "MISSING_LOCATION"
+
+
+class AttendanceEvidenceResult(str, Enum):
+    CONFIRMED = "CONFIRMED"
+    FLAGGED = "FLAGGED"

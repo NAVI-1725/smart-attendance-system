@@ -1,39 +1,69 @@
-// mobile_app\lib\features\attendance\domain\session.dart
+// mobile_app/lib/features/attendance/domain/session.dart
+
 import 'session_status.dart';
 
 class Session {
-  final String sessionId;
-  final String classId;
-  final DateTime startTime;
-  final DateTime? endTime;
+  final int sessionId;
+
+  final int courseId;
+  final String courseCode;
+  final String courseName;
+
+  final int facultyId;
+  final String facultyName;
+
+  final int classroomId;
+  final String classroomName;
+
+  final DateTime startedAt;
+  final DateTime expiresAt;
+
   final SessionStatus status;
 
   Session({
     required this.sessionId,
-    required this.classId,
-    required this.startTime,
+    required this.courseId,
+    required this.courseCode,
+    required this.courseName,
+    required this.facultyId,
+    required this.facultyName,
+    required this.classroomId,
+    required this.classroomName,
+    required this.startedAt,
+    required this.expiresAt,
     required this.status,
-    this.endTime,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
     return Session(
-      sessionId: json['session_id'] as String,
-      classId: json['class_id'] as String,
-      startTime: DateTime.parse(json['start_time'] as String),
-      endTime: json['end_time'] != null
-          ? DateTime.parse(json['end_time'] as String)
-          : null,
-      status: SessionStatusX.fromString(json['status'] as String),
+      sessionId: json['session_id'] as int,
+      courseId: json['course_id'] as int,
+      courseCode: json['course_code'] as String,
+      courseName: json['course_name'] as String,
+      facultyId: json['faculty_id'] as int,
+      facultyName: json['faculty_name'] as String,
+      classroomId: json['classroom_id'] as int,
+      classroomName: json['classroom_name'] as String,
+      startedAt: DateTime.parse(json['started_at'] as String),
+      expiresAt: DateTime.parse(json['expires_at'] as String),
+      status: SessionStatusX.fromString(
+        json['status'] as String,
+      ),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'session_id': sessionId,
-      'class_id': classId,
-      'start_time': startTime.toIso8601String(),
-      'end_time': endTime?.toIso8601String(),
+      'course_id': courseId,
+      'course_code': courseCode,
+      'course_name': courseName,
+      'faculty_id': facultyId,
+      'faculty_name': facultyName,
+      'classroom_id': classroomId,
+      'classroom_name': classroomName,
+      'started_at': startedAt.toIso8601String(),
+      'expires_at': expiresAt.toIso8601String(),
       'status': status.value,
     };
   }

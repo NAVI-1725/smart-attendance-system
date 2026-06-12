@@ -51,3 +51,10 @@ class AttendanceAttempt(Base):
         back_populates="attendance",
         cascade="all, delete-orphan",
     )
+
+    gps_evidence = relationship(
+        "AttendanceGpsEvidence",
+        back_populates="attendance",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )

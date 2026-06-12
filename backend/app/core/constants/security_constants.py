@@ -46,7 +46,7 @@ MIN_NONCE_LENGTH = 8
 MIN_ACCEPTABLE_VARIANCE = 15
 
 # Minimum BLE samples required for validation
-MIN_SAMPLE_COUNT = 3
+MIN_SAMPLE_COUNT = 2
 
 # Minimum unique beacons required
 MIN_REQUIRED_BEACONS = 2

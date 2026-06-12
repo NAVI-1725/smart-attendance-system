@@ -1,7 +1,11 @@
 // mobile_app\lib\core\services\ble\ble_service.dart
+
+import 'ble_beacon_payload.dart';
 import 'ble_scan_result.dart';
 
 abstract class BleService {
+  Future<BleBeaconPayload> readBeaconPayload();
+
   /// Start scanning and return BLE samples for a fixed window.
   /// Implementations decide how scanning is done.
   Future<List<BleScanResult>> scan({

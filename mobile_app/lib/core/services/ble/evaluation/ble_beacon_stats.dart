@@ -5,9 +5,16 @@ class BleBeaconStats {
   final String beaconId;
   final List<int> rssis;
 
+  String? latestNonce;
+  String? latestSignature;
+  int? lastSeenEpochMs;
+
   BleBeaconStats._({
     required this.beaconId,
     required this.rssis,
+    this.latestNonce,
+    this.latestSignature,
+    this.lastSeenEpochMs,
   });
 
   factory BleBeaconStats.empty(String beaconId) {
@@ -17,8 +24,25 @@ class BleBeaconStats {
     );
   }
 
-  void addSample(int rssi) {
+  void addSample(
+    int rssi, {
+    String? nonce,
+    String? signature,
+    int? lastSeenEpochMs,
+  }) {
     rssis.add(rssi);
+
+    if (nonce != null) {
+      latestNonce = nonce;
+    }
+
+    if (signature != null) {
+      latestSignature = signature;
+    }
+
+    if (lastSeenEpochMs != null) {
+      this.lastSeenEpochMs = lastSeenEpochMs;
+    }
   }
 
   int? get averageRssi {

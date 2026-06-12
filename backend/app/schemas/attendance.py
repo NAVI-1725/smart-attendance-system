@@ -19,7 +19,7 @@ class BeaconEvidence(BaseModel):
     # Replay protection + future trust scoring support
     nonce: str
     signature: str
-    scan_window: int = 5
+    scan_window: int = 10
 
 
 class BleEvidence(BaseModel):
@@ -27,9 +27,17 @@ class BleEvidence(BaseModel):
     per_beacon: Dict[str, BeaconEvidence]
 
 
+class GPSEvidenceRequest(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy_meters: float
+    captured_at: datetime
+
+
 class AttendanceAttemptRequest(BaseModel):
     session_id: str
     ble_evidence: BleEvidence
+    gps_evidence: GPSEvidenceRequest
 
 
 class AttendanceJoinResponse(BaseModel):
@@ -37,8 +45,12 @@ class AttendanceJoinResponse(BaseModel):
 
 
 class AttendanceSubmitResponse(BaseModel):
+    attempt_id: str
+    session_id: str
+    student_id: str
+    timestamp: str
     status: str
-    session_id: int
+    is_flagged: bool
 
 
 class CloseAttendanceResponse(BaseModel):
@@ -46,3 +58,39 @@ class CloseAttendanceResponse(BaseModel):
     classroom_id: int
     session_id: int
     closed_at: datetime
+
+
+class AttendanceSnapshotResponse(BaseModel):
+    id: int
+    student_id: int
+    classroom_id: int
+    session_id: int
+    status: str
+
+
+class BleEvidenceSnapshotResponse(BaseModel):
+    attendance_id: int
+    ble_payload: dict
+    created_at: datetime
+
+
+class GpsEvidenceSnapshotResponse(BaseModel):
+    attendance_id: int
+
+    latitude: float
+    longitude: float
+    accuracy_meters: float
+    captured_at: datetime
+
+    distance_from_classroom_meters: float | None
+
+    validation_result: str | None
+    validation_reason: str | None
+
+    created_at: datetime
+
+
+class AttendanceEvidenceResponse(BaseModel):
+    attendance: AttendanceSnapshotResponse
+    ble_evidence: BleEvidenceSnapshotResponse | None
+    gps_evidence: GpsEvidenceSnapshotResponse | None

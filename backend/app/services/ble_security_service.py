@@ -108,16 +108,65 @@ def validate_beacon_integrity(
 
         beacon_count += 1
 
-        if beacon.variance > MIN_ACCEPTABLE_VARIANCE:
-            return AttendanceStatus.FLAGGED
+        print(
+            "VARIANCE =",
+            beacon.variance,
+        )
+        print(
+            "MIN VARIANCE =",
+            MIN_ACCEPTABLE_VARIANCE,
+        )
+
+        print("OVERALL =", ble.overall)
+        print("VARIANCE =", beacon.variance)
+
+        if beacon.variance is not None:
+            if beacon.variance < MIN_ACCEPTABLE_VARIANCE:
+                print(
+                    "LOW VARIANCE =",
+                    beacon.variance,
+                )
+
+        print("OVERALL =", ble.overall)
+        print("VARIANCE =", beacon.variance)
+
+        print(
+            "SAMPLE COUNT =",
+            beacon.sample_count,
+        )
+        print(
+            "MIN SAMPLES =",
+            MIN_SAMPLE_COUNT,
+        )
 
         if beacon.sample_count < MIN_SAMPLE_COUNT:
-            return AttendanceStatus.FLAGGED
+            print(
+                "LOW SAMPLE COUNT =",
+                beacon.sample_count,
+            )
 
         if beacon.proximity not in VALID_PROXIMITIES:
             return AttendanceStatus.FLAGGED
 
+    print(
+        "BEACON COUNT =",
+        beacon_count,
+    )
+    print(
+        "MIN REQUIRED =",
+        MIN_REQUIRED_BEACONS,
+    )
+
     if beacon_count < MIN_REQUIRED_BEACONS:
+        print(
+            "BEACON COUNT =",
+            beacon_count,
+        )
+        print(
+            "MIN REQUIRED =",
+            MIN_REQUIRED_BEACONS,
+        )
+
         raise InvalidBLEEvidence(
             "Insufficient BLE beacon coverage",
         )
@@ -181,7 +230,13 @@ def validate_ble_attendance(
     if integrity_status == AttendanceStatus.FLAGGED:
         return AttendanceStatus.FLAGGED
 
+    print("OVERALL =", ble.overall)
+    print("VARIANCE =", beacon.variance)
+
     if ble.overall not in ("STRONG", "MEDIUM"):
         return AttendanceStatus.FLAGGED
+
+    print("OVERALL =", ble.overall)
+    print("VARIANCE =", beacon.variance)
 
     return AttendanceStatus.CONFIRMED

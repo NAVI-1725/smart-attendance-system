@@ -20,19 +20,31 @@ from app.models.user import User
 from app.models.attendance_session import AttendanceSession
 from app.models.attendance import AttendanceAttempt
 from app.models.attendance_ble_evidence import AttendanceBleEvidence
+from app.models.attendance_gps_evidence import AttendanceGpsEvidence
 from app.models.attendance_ble_nonce import AttendanceBLENonce
 from app.models.enums import (
     AttendanceStatus,
     AttendanceSessionStatus,
+    AttendanceEvidenceResult,
 )
 from app.schemas.attendance import (
     AttendanceAttemptRequest,
     AttendanceJoinResponse,
     AttendanceSubmitResponse,
     CloseAttendanceResponse,
+    AttendanceEvidenceResponse,
+    AttendanceSnapshotResponse,
+    BleEvidenceSnapshotResponse,
+    GpsEvidenceSnapshotResponse,
 )
 from app.services.ble_security_service import (
     validate_ble_attendance,
+)
+from app.services.gps_service import (
+    validate_location,
+)
+from app.services.attendance_evidence_service import (
+    evaluate_evidence,
 )
 from app.services.session_cleanup_service import (
     deactivate_expired_sessions,
@@ -106,12 +118,38 @@ def submit_attendance(
         "BLE evidence received",
         extra={"ble": data.ble_evidence},
     )
+    print("SESSION ID =", session.id)
+    print("CLASSROOM ID =", session.classroom_id)
+    print("BLE PAYLOAD =", data.ble_evidence)
 
-    status = validate_ble_attendance(
+    ble_status = validate_ble_attendance(
         db=db,
         session_id=session.id,
         classroom_id=session.classroom_id,
         ble=data.ble_evidence,
+    )
+    print("BLE STATUS =", ble_status)
+
+    gps_result, distance_meters, validation_reason = (
+        validate_location(
+            classroom=session.classroom,
+            latitude=data.gps_evidence.latitude,
+            longitude=data.gps_evidence.longitude,
+            accuracy_meters=data.gps_evidence.accuracy_meters,
+            captured_at=data.gps_evidence.captured_at,
+        )
+    )
+
+    evidence_result = evaluate_evidence(
+        ble_result=ble_status,
+        gps_result=gps_result,
+    )
+
+    attendance_status = (
+        AttendanceStatus.CONFIRMED
+        if evidence_result
+        == AttendanceEvidenceResult.CONFIRMED
+        else AttendanceStatus.FLAGGED
     )
 
     try:
@@ -120,7 +158,7 @@ def submit_attendance(
             student_id=current_user.id,
             classroom_id=session.classroom_id,
             session_id=session.id,
-            status=status,
+            status=attendance_status,
         )
 
         db.add(attendance)
@@ -144,13 +182,28 @@ def submit_attendance(
 
             db.add(ble_row)
 
+        gps_row = AttendanceGpsEvidence(
+            attendance_id=attendance.id,
+            latitude=data.gps_evidence.latitude,
+            longitude=data.gps_evidence.longitude,
+            accuracy_meters=data.gps_evidence.accuracy_meters,
+            captured_at=data.gps_evidence.captured_at,
+            distance_from_classroom_meters=distance_meters,
+            validation_result=gps_result,
+            validation_reason=validation_reason,
+        )
+
+        db.add(gps_row)
+
         db.commit()
 
         db.refresh(attendance)
 
-    except IntegrityError:
+    except IntegrityError as e:
 
         db.rollback()
+
+        print("INTEGRITY ERROR =", e)
 
         raise ApiError(
             ErrorCode.DUPLICATE_ATTENDANCE,
@@ -163,10 +216,23 @@ def submit_attendance(
         db.rollback()
         raise
 
-    return {
-        "status": "accepted",
-        "session_id": session.id,
+    response = {
+        "attempt_id": str(attendance.id),
+        "session_id": str(session.id),
+        "student_id": str(current_user.id),
+        "timestamp": datetime.now(
+            timezone.utc,
+        ).isoformat(),
+        "status": attendance.status.value,
+        "is_flagged": (
+            attendance.status
+            == AttendanceStatus.FLAGGED
+        ),
     }
+
+    print("ATTENDANCE RESPONSE =", response)
+
+    return response
 
 
 @router.post(
@@ -329,3 +395,94 @@ def close_attendance(
         "session_id": faculty_session.id,
         "closed_at": faculty_session.closed_at,
     }
+
+
+@router.get(
+    "/{attendance_id}/evidence",
+    response_model=AttendanceEvidenceResponse,
+    dependencies=[Depends(require_faculty)],
+)
+def get_attendance_evidence(
+    attendance_id: int,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance record not found",
+            status_code=404,
+        )
+
+    ensure_faculty_owns_classroom(
+        db,
+        current_user.id,
+        attendance.classroom_id,
+    )
+
+    ble_evidence = (
+        db.query(AttendanceBleEvidence)
+        .filter(
+            AttendanceBleEvidence.attendance_id
+            == attendance.id
+        )
+        .first()
+    )
+
+    gps_evidence = (
+        db.query(AttendanceGpsEvidence)
+        .filter(
+            AttendanceGpsEvidence.attendance_id
+            == attendance.id
+        )
+        .first()
+    )
+
+    return AttendanceEvidenceResponse(
+        attendance=AttendanceSnapshotResponse(
+            id=attendance.id,
+            student_id=attendance.student_id,
+            classroom_id=attendance.classroom_id,
+            session_id=attendance.session_id,
+            status=attendance.status.value,
+        ),
+        ble_evidence=(
+            BleEvidenceSnapshotResponse(
+                attendance_id=ble_evidence.attendance_id,
+                ble_payload=ble_evidence.ble_payload,
+                created_at=ble_evidence.created_at,
+            )
+            if ble_evidence
+            else None
+        ),
+        gps_evidence=(
+            GpsEvidenceSnapshotResponse(
+                attendance_id=gps_evidence.attendance_id,
+                latitude=gps_evidence.latitude,
+                longitude=gps_evidence.longitude,
+                accuracy_meters=gps_evidence.accuracy_meters,
+                captured_at=gps_evidence.captured_at,
+                distance_from_classroom_meters=(
+                    gps_evidence.distance_from_classroom_meters
+                ),
+                validation_result=(
+                    gps_evidence.validation_result.value
+                    if gps_evidence.validation_result
+                    else None
+                ),
+                validation_reason=gps_evidence.validation_reason,
+                created_at=gps_evidence.created_at,
+            )
+            if gps_evidence
+            else None
+        ),
+    )

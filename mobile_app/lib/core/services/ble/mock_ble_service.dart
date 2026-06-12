@@ -1,7 +1,9 @@
 // mobile_app\lib\core\services\ble\mock_ble_service.dart
+
 import 'dart:async';
 import 'dart:math';
 
+import 'ble_beacon_payload.dart';
 import 'ble_service.dart';
 import 'ble_scan_result.dart';
 
@@ -17,6 +19,13 @@ class MockBleService implements BleService {
   });
 
   bool _scanning = false;
+
+  @override
+  Future<BleBeaconPayload> readBeaconPayload() async {
+    throw UnimplementedError(
+      'MockBleService does not support readBeaconPayload.',
+    );
+  }
 
   @override
   Future<List<BleScanResult>> scan({
@@ -35,6 +44,10 @@ class MockBleService implements BleService {
             classroomId: classroomId,
             rssi: _simulateRssi(beaconId),
             timestamp: DateTime.now(),
+            nonce: 'mock-nonce',
+            signature: 'mock-signature',
+            lastSeenEpochMs:
+                DateTime.now().millisecondsSinceEpoch,
           ),
         );
       }

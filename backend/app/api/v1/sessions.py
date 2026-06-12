@@ -1,3 +1,4 @@
+# backend\app\api\v1\sessions.py
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
@@ -17,9 +18,13 @@ from app.schemas.session import (
     StartSessionRequest,
     SessionResponse,
     ActiveSessionResponse,
+    StudentActiveSessionResponse,
 )
 from app.services.session_cleanup_service import (
     deactivate_expired_sessions,
+)
+from app.services.session_discovery_service import (
+    get_active_sessions_for_student,
 )
 
 router = APIRouter(tags=["Sessions"])
@@ -133,3 +138,25 @@ def get_active_session(
         "expires_at": session.expires_at,
         "duration_minutes": session.duration_minutes,
     }
+
+
+@router.get(
+    "/my-active-sessions",
+    response_model=list[StudentActiveSessionResponse],
+)
+def get_my_active_sessions(
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+
+    if current_user.role != UserRole.STUDENT.value:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Only students can access active sessions",
+            status_code=403,
+        )
+
+    return get_active_sessions_for_student(
+        db=db,
+        student_id=current_user.id,
+    )

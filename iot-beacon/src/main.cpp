@@ -117,6 +117,9 @@ void setup()
 
     pAdvertising->setAdvertisementData(advData);
 
+    pAdvertising->setMinInterval(32);
+    pAdvertising->setMaxInterval(64);
+
     pAdvertising->start();
 
     Serial.println("BLE Advertising Started");

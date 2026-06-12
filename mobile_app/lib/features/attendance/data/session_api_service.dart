@@ -1,5 +1,7 @@
 // mobile_app\lib\features\attendance\data\session_api_service.dart
+
 import 'package:dio/dio.dart';
+
 import '../../../core/services/api_client.dart';
 import '../domain/session.dart';
 
@@ -8,23 +10,34 @@ class SessionApiService {
 
   SessionApiService(this._apiClient);
 
-  Future<Session?> getActiveSession() async {
+  Future<List<Session>>
+      getActiveSessions() async {
     try {
-      final Response response = await _apiClient.dio.get(
-        '/sessions/active',
+      final Response response =
+          await _apiClient.dio.get(
+        '/sessions/my-active-sessions',
       );
 
-      return Session.fromJson(
-        response.data as Map<String, dynamic>,
+      print(
+        'ACTIVE SESSIONS RESPONSE: '
+        '${response.data}',
       );
-    } on DioException catch (e) {
-      final errorData = e.response?.data;
 
-      if (errorData is Map && errorData['detail'] == 'No active session') {
-        return null;
-      }
+      final List<dynamic> data =
+          response.data as List<dynamic>;
 
-      throw Exception('Failed to fetch active session');
+      return data
+          .map(
+            (item) => Session.fromJson(
+              item
+                  as Map<String, dynamic>,
+            ),
+          )
+          .toList();
+    } on DioException {
+      throw Exception(
+        'Failed to fetch active sessions',
+      );
     }
   }
 }

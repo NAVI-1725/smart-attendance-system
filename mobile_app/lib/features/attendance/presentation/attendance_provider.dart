@@ -1,9 +1,11 @@
-// mobile_app\lib\features\attendance\presentation\attendance_provider.dart
+// mobile_app/lib/features/attendance/presentation/attendance_provider.dart
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/api_client_provider.dart';
 import '../../../core/services/ble/ble_service_provider.dart';
 import '../data/attendance_api_service.dart';
+import '../services/gps_service.dart';
 import 'attendance_notifier.dart';
 import 'attendance_state.dart';
 
@@ -14,8 +16,11 @@ final attendanceNotifierProvider =
 
   final service = AttendanceApiService(apiClient);
 
+  final gpsService = GpsService();
+
   return AttendanceNotifier(
     service,
     bleService,
+    gpsService,
   );
 });

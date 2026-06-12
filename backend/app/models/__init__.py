@@ -1,9 +1,12 @@
-# backend\app\models\__init__.py
+# backend/app/models/__init__.py
 from app.models.user import User as User
 from app.models.device import Device as Device
 from app.models.attendance import AttendanceAttempt as AttendanceAttempt
 from app.models.attendance_ble_evidence import (
     AttendanceBleEvidence as AttendanceBleEvidence,
+)
+from app.models.attendance_gps_evidence import (
+    AttendanceGpsEvidence as AttendanceGpsEvidence,
 )
 from app.models.classroom import Classroom as Classroom
 from app.models.enrollment import Enrollment as Enrollment
