@@ -1,4 +1,4 @@
-// iot-beacon\src\main.cpp
+// iot-beacon/src/main.cpp
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -17,6 +17,38 @@ static const char* BEACON_CHARACTERISTIC_UUID =
 NimBLEServer* pServer = nullptr;
 NimBLEService* pService = nullptr;
 NimBLECharacteristic* pCharacteristic = nullptr;
+
+class BeaconServerCallbacks : public NimBLEServerCallbacks
+{
+public:
+
+    void onConnect(
+        NimBLEServer* pServer,
+        NimBLEConnInfo& connInfo
+    ) override
+    {
+        Serial.println(
+            "BLE Client Connected"
+        );
+    }
+
+    void onDisconnect(
+        NimBLEServer* pServer,
+        NimBLEConnInfo& connInfo,
+        int reason
+    ) override
+    {
+        Serial.println(
+            "BLE Client Disconnected"
+        );
+
+        NimBLEDevice::getAdvertising()->start();
+
+        Serial.println(
+            "Advertising Restarted"
+        );
+    }
+};
 
 void updateBeaconPayload()
 {
@@ -96,6 +128,10 @@ void setup()
     NimBLEDevice::init(DEVICE_NAME);
 
     pServer = NimBLEDevice::createServer();
+
+    pServer->setCallbacks(
+        new BeaconServerCallbacks()
+    );
 
     pService = pServer->createService(BEACON_SERVICE_UUID);
 

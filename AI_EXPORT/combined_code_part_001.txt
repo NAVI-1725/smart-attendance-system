@@ -1,92 +1,565 @@
 ################################################################################
-FILE: backend/app/models/device.py
+FILE: backend/app/api/v1/devices.py
 ################################################################################
 
-# backend\app\models\device.py
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.sql import func
-from app.db.base_class import Base
+# backend\app\api\v1\devices.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.models.device import Device
+from app.models.user import User
+from app.core.auth import get_current_user
+from app.core.errors import ApiError, ErrorCode
+from app.services.device_binding_service import DeviceBindingService
+
+router = APIRouter(tags=["Devices"])
 
 
-class Device(Base):
-    __tablename__ = "devices"
+@router.post("/bind")
+def bind_device(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    device_id = payload.get("device_id")
 
-    id = Column(Integer, primary_key=True, index=True)
+    if not device_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="device_id is required",
+        )
 
-    user_id = Column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-        index=True,
+    # 🔍 Check if user already has a registered device
+    existing_device = (
+        db.query(Device)
+        .filter(
+            Device.user_id == current_user.id,
+            Device.is_active,
+        )
+        .first()
     )
 
-    device_id = Column(String, unique=True, index=True, nullable=False)
-    is_active = Column(Boolean, default=True)
+    # ✅ FIRST-TIME BIND (THIS WAS MISSING)
+    if not existing_device:
+        new_device = Device(
+            user_id=current_user.id,
+            device_id=device_id,
+            is_active=True,
+        )
+        db.add(new_device)
+        db.commit()
+        db.refresh(new_device)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+        return {"status": "device_bound"}
 
+    # ✅ SAME DEVICE → allow silently
+    if existing_device.device_id == device_id:
+        return {"status": "device_verified"}
 
-################################################################################
-END FILE: backend/app/models/device.py
-################################################################################
-
-################################################################################
-FILE: backend/app/models/enrollment.py
-################################################################################
-
-# backend\app\models\enrollment.py
-
-from sqlalchemy import Column, Integer, ForeignKey, UniqueConstraint, DateTime
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-
-from app.db.base_class import Base
-
-
-class Enrollment(Base):
-    __tablename__ = "enrollments"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    student_id = Column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-        index=True,
-    )
-
-    course_id = Column(
-        Integer,
-        ForeignKey("courses.id"),
-        nullable=False,
-        index=True,
-    )
-
-    created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
-
-    student = relationship(
-        "User",
-        back_populates="enrollments",
-    )
-
-    course = relationship(
-        "Course",
-        back_populates="enrollments",
-    )
-
-    __table_args__ = (
-        UniqueConstraint(
-            "student_id",
-            "course_id",
-            name="uq_student_course",
+    # ❌ DIFFERENT DEVICE → reject
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "This account is already registered on another device. "
+            "Please use your registered device or contact the academic office "
+            "to request a device reset."
         ),
     )
 
+
+@router.post("/self-unbind")
+def self_unbind_device(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role == "student":
+        raise ApiError(
+            ErrorCode.FORBIDDEN,
+            "Students cannot reset devices",
+            status_code=403,
+        )
+
+    DeviceBindingService(
+        db,
+    ).self_unbind_device(
+        current_user.id,
+    )
+
+    return {
+        "message": "Device unbound successfully",
+    }
+
 ################################################################################
-END FILE: backend/app/models/enrollment.py
+END FILE: backend/app/api/v1/devices.py
+################################################################################
+
+################################################################################
+FILE: backend/app/services/device_binding_service.py
+################################################################################
+
+# backend\app\services\device_binding_service.py
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+
+from app.models.device import Device
+from app.models.user import User
+from app.core.errors import ApiError, ErrorCode
+
+
+class DeviceBindingService:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def bind_device(self, user: User, device_id: str):
+        device_id = device_id.strip().lower()
+
+        existing_device = (
+            self.db.query(Device)
+            .filter(Device.user_id == user.id, Device.is_active)
+            .first()
+        )
+
+        # Case 1: No device bound yet → bind
+        if not existing_device:
+            inactive_device = (
+                self.db.query(Device)
+                .filter(
+                    Device.device_id == device_id,
+                    Device.is_active == False,
+                )
+                .first()
+            )
+
+            if inactive_device:
+                inactive_device.user_id = user.id
+                inactive_device.is_active = True
+
+                self.db.commit()
+
+                return
+
+            device = Device(
+                user_id=user.id,
+                device_id=device_id,
+                is_active=True,
+            )
+
+            self.db.add(device)
+
+            try:
+                self.db.commit()
+            except IntegrityError:
+                self.db.rollback()
+
+                raise ApiError(
+                    ErrorCode.DEVICE_BINDING_CONFLICT,
+                    (
+                        "This account is already registered on another device. "
+                        "Please contact the academic office to reset device access."
+                    ),
+                    status_code=409,
+                )
+
+            return
+
+        # Case 2: Same device → allow
+        if existing_device.device_id == device_id:
+            return
+
+        # Case 3: Different device → BLOCK
+        raise ApiError(
+            ErrorCode.DEVICE_BINDING_CONFLICT,
+            (
+                "This account is already registered on another device. "
+                "Please contact the academic office to reset device access."
+            ),
+            status_code=403,
+        )
+
+    def unbind_device(
+        self,
+        student_id: int,
+    ):
+        device = (
+            self.db.query(Device)
+            .filter(
+                Device.user_id == student_id,
+                Device.is_active,
+            )
+            .first()
+        )
+
+        if not device:
+            return
+
+        device.is_active = False
+
+        self.db.commit()
+
+    def self_unbind_device(
+        self,
+        user_id: int,
+    ):
+        device = (
+            self.db.query(Device)
+            .filter(
+                Device.user_id == user_id,
+                Device.is_active,
+            )
+            .first()
+        )
+
+        if not device:
+            return
+
+        device.is_active = False
+
+        self.db.commit()
+
+################################################################################
+END FILE: backend/app/services/device_binding_service.py
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/auth/presentation/auth_state.dart
+################################################################################
+
+// mobile_app\lib\features\auth\presentation\auth_state.dart
+class AuthState {
+  final bool isAuthenticated;
+  final bool isLoading;
+  final String? error;
+  final String? role;
+
+  const AuthState({
+    required this.isAuthenticated,
+    this.isLoading = false,
+    this.error,
+    this.role,
+  });
+
+  factory AuthState.initial() {
+    return const AuthState(
+      isAuthenticated: false,
+      isLoading: false,
+      role: null,
+    );
+  }
+
+  AuthState copyWith({
+    bool? isAuthenticated,
+    bool? isLoading,
+    String? error,
+    String? role,
+  }) {
+    return AuthState(
+      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+      role: role ?? this.role,
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/auth/presentation/auth_state.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/profile/data/profile_api_service.dart
+################################################################################
+
+// mobile_app/lib/features/profile/data/profile_api_service.dart
+
+import 'package:dio/dio.dart';
+
+import '../../../core/services/api_client.dart';
+import '../domain/profile_model.dart';
+
+class ProfileApiService {
+  final ApiClient _apiClient;
+
+  ProfileApiService(this._apiClient);
+
+  Future<ProfileModel> getProfile() async {
+    final Response response = await _apiClient.dio.get(
+      '/auth/profile',
+    );
+
+    return ProfileModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/profile/data/profile_api_service.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/profile/domain/profile_model.dart
+################################################################################
+
+// mobile_app/lib/features/profile/domain/profile_model.dart
+
+class ProfileModel {
+  final int userId;
+  final String role;
+  final String fullName;
+  final String email;
+  final String? deviceId;
+
+  const ProfileModel({
+    required this.userId,
+    required this.role,
+    required this.fullName,
+    required this.email,
+    required this.deviceId,
+  });
+
+  factory ProfileModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return ProfileModel(
+      userId: json['user_id'] as int,
+      role: json['role'] as String,
+      fullName: json['full_name'] as String,
+      email: json['email'] as String,
+      deviceId: json['device_id'] as String?,
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/profile/domain/profile_model.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/profile/presentation/profile_screen.dart
+################################################################################
+
+// mobile_app/lib/features/profile/presentation/profile_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../auth/presentation/auth_provider.dart';
+import 'profile_provider.dart';
+
+class ProfileScreen extends ConsumerStatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  ConsumerState<ProfileScreen> createState() =>
+      _ProfileScreenState();
+}
+
+class _ProfileScreenState
+    extends ConsumerState<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      ref
+          .read(
+            profileNotifierProvider.notifier,
+          )
+          .loadProfile();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(
+      profileNotifierProvider,
+    );
+
+    final authState = ref.watch(
+      authNotifierProvider,
+    );
+
+    final role = authState.role;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Profile',
+        ),
+      ),
+      body: Builder(
+        builder: (context) {
+          if (state.isLoading) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          if (state.error != null) {
+            return Center(
+              child: Card(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize:
+                        MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.person_off,
+                        size: 48,
+                      ),
+                      const SizedBox(
+                        height: 16,
+                      ),
+                      const Text(
+                        'Unable to load profile',
+                      ),
+                      const SizedBox(
+                        height: 8,
+                      ),
+                      const Text(
+                        'Please try again later.',
+                      ),
+                      const SizedBox(
+                        height: 16,
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          ref
+                              .read(
+                                profileNotifierProvider
+                                    .notifier,
+                              )
+                              .loadProfile();
+                        },
+                        child: const Text(
+                          'Retry',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final profile = state.profile;
+
+          if (profile == null) {
+            return const Center(
+              child: Text(
+                'Unable to load profile',
+              ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.role.toLowerCase() == 'admin'
+                              ? 'Admin ID: ${profile.userId}'
+                              : profile.role.toLowerCase() == 'faculty'
+                                  ? 'Faculty ID: ${profile.userId}'
+                                  : 'Student ID: ${profile.userId}',
+                        ),
+                        const SizedBox(
+                          height: 12,
+                        ),
+                        Text(
+                          'Full Name: ${profile.fullName}',
+                        ),
+                        const SizedBox(
+                          height: 12,
+                        ),
+                        Text(
+                          'Email: ${profile.email}',
+                        ),
+                        const SizedBox(
+                          height: 12,
+                        ),
+                        Text(
+                          'Registered Device: ${profile.deviceId ?? 'Not Available'}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(
+                  height: 16,
+                ),
+                if (role == 'student')
+                  Material(
+                    borderRadius:
+                        BorderRadius.circular(8),
+                    color:
+                        Colors.blue.withValues(
+                      alpha: 0.1,
+                    ),
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.all(16),
+                      child: Text(
+                        'Device changes require administrator approval.',
+                      ),
+                    ),
+                  )
+                else if (role == 'faculty')
+                  Material(
+                    borderRadius:
+                        BorderRadius.circular(8),
+                    color:
+                        Colors.blue.withValues(
+                      alpha: 0.1,
+                    ),
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.all(16),
+                      child: Text(
+                        'You may reset your own device from Account Settings.',
+                      ),
+                    ),
+                  )
+                else if (role == 'admin')
+                  Material(
+                    borderRadius:
+                        BorderRadius.circular(8),
+                    color:
+                        Colors.blue.withValues(
+                      alpha: 0.1,
+                    ),
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.all(16),
+                      child: Text(
+                        'You can manage device access for all users.',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/profile/presentation/profile_screen.dart
 ################################################################################
 

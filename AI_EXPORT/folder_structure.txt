@@ -1,8 +1,23 @@
 FOLDER STRUCTURE
 ============================================================
 
-└── backend
+├── backend
     └── app
-        └── models
-            ├── device.py
-            └── enrollment.py
+        ├── api
+            └── v1
+                └── devices.py
+        └── services
+            └── device_binding_service.py
+└── mobile_app
+    └── lib
+        └── features
+            ├── auth
+                └── presentation
+                    └── auth_state.dart
+            └── profile
+                ├── data
+                    └── profile_api_service.dart
+                ├── domain
+                    └── profile_model.dart
+                └── presentation
+                    └── profile_screen.dart

@@ -1,9 +1,38 @@
-// mobile_app/lib/features/attendance/data/session_api_service.dart
+// mobile_app/lib/features/attendance/data/attendance_api_service.dart
 
 import 'package:dio/dio.dart';
 import '../../../core/services/api_client.dart';
 import '../domain/attendance_attempt.dart';
 import '../domain/gps_evidence.dart';
+
+class AttendanceAlreadyMarkedException
+    implements Exception {
+  const AttendanceAlreadyMarkedException();
+
+  @override
+  String toString() {
+    return 'Attendance already marked';
+  }
+}
+
+class SessionClosedException
+    implements Exception {
+  const SessionClosedException();
+}
+
+class AttendanceSubmissionException
+    implements Exception {
+  final String message;
+
+  const AttendanceSubmissionException(
+    this.message,
+  );
+
+  @override
+  String toString() {
+    return message;
+  }
+}
 
 class AttendanceApiService {
   final ApiClient _apiClient;
@@ -44,26 +73,48 @@ class AttendanceApiService {
       final errorData =
           e.response?.data;
 
+      print(
+        'ATTENDANCE HTTP STATUS: '
+        '$statusCode',
+      );
+
+      print(
+        'ATTENDANCE ERROR DATA: '
+        '$errorData',
+      );
+
+      print(
+        'ATTENDANCE DIO ERROR: '
+        '${e.message}',
+      );
+
+      if (statusCode == 403) {
+        final code =
+            errorData?['detail']?['error']?['code'];
+
+        print('ERROR CODE: $code');
+
+        if (code == 'SESSION_CLOSED') {
+          throw const SessionClosedException();
+        }
+      }
+
       if (statusCode == 410) {
-        throw Exception(
-          'Session is closed',
-        );
+        throw const SessionClosedException();
       }
 
       if (statusCode == 409) {
-        throw Exception(
-          'Attendance already marked',
-        );
+        throw const AttendanceAlreadyMarkedException();
       }
 
       if (errorData is Map &&
           errorData['detail'] != null) {
-        throw Exception(
-          errorData['detail'],
+        throw AttendanceSubmissionException(
+          errorData['detail'].toString(),
         );
       }
 
-      throw Exception(
+      throw const AttendanceSubmissionException(
         'Attendance submission failed',
       );
     }

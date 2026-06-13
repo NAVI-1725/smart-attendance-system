@@ -53,6 +53,13 @@ class AttendanceSubmitResponse(BaseModel):
     is_flagged: bool
 
 
+class AttendanceHistoryItem(BaseModel):
+    course_code: str
+    course_name: str
+    status: str
+    timestamp: datetime
+
+
 class CloseAttendanceResponse(BaseModel):
     status: str
     classroom_id: int

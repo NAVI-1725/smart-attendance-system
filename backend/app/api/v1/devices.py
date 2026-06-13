@@ -6,6 +6,8 @@ from app.db.session import get_db
 from app.models.device import Device
 from app.models.user import User
 from app.core.auth import get_current_user
+from app.core.errors import ApiError, ErrorCode
+from app.services.device_binding_service import DeviceBindingService
 
 router = APIRouter(tags=["Devices"])
 
@@ -29,7 +31,7 @@ def bind_device(
         db.query(Device)
         .filter(
             Device.user_id == current_user.id,
-            Device.is_active ,
+            Device.is_active,
         )
         .first()
     )
@@ -60,3 +62,26 @@ def bind_device(
             "to request a device reset."
         ),
     )
+
+
+@router.post("/self-unbind")
+def self_unbind_device(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role == "student":
+        raise ApiError(
+            ErrorCode.FORBIDDEN,
+            "Students cannot reset devices",
+            status_code=403,
+        )
+
+    DeviceBindingService(
+        db,
+    ).self_unbind_device(
+        current_user.id,
+    )
+
+    return {
+        "message": "Device unbound successfully",
+    }

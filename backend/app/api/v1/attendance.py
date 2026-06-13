@@ -22,6 +22,7 @@ from app.models.attendance import AttendanceAttempt
 from app.models.attendance_ble_evidence import AttendanceBleEvidence
 from app.models.attendance_gps_evidence import AttendanceGpsEvidence
 from app.models.attendance_ble_nonce import AttendanceBLENonce
+from app.models.course import Course
 from app.models.enums import (
     AttendanceStatus,
     AttendanceSessionStatus,
@@ -36,6 +37,7 @@ from app.schemas.attendance import (
     AttendanceSnapshotResponse,
     BleEvidenceSnapshotResponse,
     GpsEvidenceSnapshotResponse,
+    AttendanceHistoryItem,
 )
 from app.services.ble_security_service import (
     validate_ble_attendance,
@@ -344,6 +346,52 @@ def get_classroom_attendance(
             "status": attendance.status,
         }
         for attendance, name, email in records
+    ]
+
+
+@router.get(
+    "/my-history",
+    response_model=list[AttendanceHistoryItem],
+)
+def get_my_attendance_history(
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+
+    records = (
+        db.query(
+            AttendanceAttempt,
+            AttendanceSession,
+            Course,
+        )
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .join(
+            Course,
+            AttendanceSession.course_id
+            == Course.id,
+        )
+        .filter(
+            AttendanceAttempt.student_id
+            == current_user.id,
+        )
+        .order_by(
+            AttendanceAttempt.id.desc(),
+        )
+        .all()
+    )
+
+    return [
+        AttendanceHistoryItem(
+            course_code=course.course_code,
+            course_name=course.course_name,
+            status=attendance.status.value,
+            timestamp=session.started_at,
+        )
+        for attendance, session, course in records
     ]
 
 

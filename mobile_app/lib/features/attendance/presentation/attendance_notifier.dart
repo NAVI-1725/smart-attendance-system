@@ -32,6 +32,15 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
         duration: const Duration(seconds: 15),
       );
 
+      if (rawSamples.isEmpty) {
+        state = AttendanceState(
+          isLoading: false,
+          error: 'Beacon not detected',
+        );
+
+        return;
+      }
+
       print('RAW SAMPLE COUNT: ${rawSamples.length}');
 
       // 2️⃣ Normalize BLE samples into domain model
@@ -89,9 +98,7 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       // 5️⃣ Attendance submission
       final attempt = await _apiService.submitAttendance(
         sessionId: sessionId,
-
         bleEvidence: bleEvidence,
-
         gpsEvidence: gpsEvidence,
       );
 
@@ -100,14 +107,45 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
         attempt: attempt,
         bleEvidence: bleResult,
       );
-    } catch (e, stackTrace) {
-      print('ATTENDANCE ERROR: $e');
+    } catch (e, st) {
+      print(
+        'ATTENDANCE ERROR TYPE: '
+        '${e.runtimeType}',
+      );
 
-      print(stackTrace);
+      print(
+        'ATTENDANCE ERROR: '
+        '$e',
+      );
+
+      print(st);
+
+      String errorMessage;
+
+      if (e is AttendanceAlreadyMarkedException) {
+        errorMessage =
+            'Attendance already marked';
+      } else if (e is SessionClosedException) {
+        errorMessage =
+            'Session closed';
+      } else if (
+          e is LocationDisabledException ||
+          e is LocationPermissionDeniedException ||
+          e is LocationPermissionForeverDeniedException) {
+        errorMessage =
+            'Unable to obtain location';
+      } else if (e
+          is AttendanceSubmissionException) {
+        errorMessage =
+            e.toString();
+      } else {
+        errorMessage =
+            'Unable to connect';
+      }
 
       state = AttendanceState(
         isLoading: false,
-        error: e.toString(),
+        error: errorMessage,
       );
     }
   }

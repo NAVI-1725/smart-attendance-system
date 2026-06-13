@@ -172,6 +172,8 @@ class FlutterBleService implements BleService {
 
     await FlutterBluePlus.startScan(
       timeout: duration,
+      androidScanMode:
+          AndroidScanMode.lowLatency,
     );
 
     subscription =
@@ -217,6 +219,14 @@ class FlutterBleService implements BleService {
               timestamp: DateTime.now(),
             ),
           );
+
+          print(
+            'RSSI SAMPLE | '
+            'deviceId=$deviceKey | '
+            'rssi=${result.rssi} | '
+            'timestamp=${DateTime.now().toIso8601String()} | '
+            'sampleCount=${pendingSamplesPerDevice[deviceKey]!.length}',
+          );
         }
       },
     );
@@ -234,6 +244,15 @@ class FlutterBleService implements BleService {
       print(
         'DISCOVERED DEVICE FINAL: '
         '${d.platformName}',
+      );
+    }
+
+    for (final entry
+        in pendingSamplesPerDevice.entries) {
+      print(
+        'DEVICE SAMPLE SUMMARY | '
+        'deviceId=${entry.key} | '
+        'sampleCount=${entry.value.length}',
       );
     }
 

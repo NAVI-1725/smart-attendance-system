@@ -16,12 +16,29 @@ class DeviceBindingService:
 
         existing_device = (
             self.db.query(Device)
-            .filter(Device.user_id == user.id, Device.is_active )
+            .filter(Device.user_id == user.id, Device.is_active)
             .first()
         )
 
         # Case 1: No device bound yet → bind
         if not existing_device:
+            inactive_device = (
+                self.db.query(Device)
+                .filter(
+                    Device.device_id == device_id,
+                    Device.is_active == False,
+                )
+                .first()
+            )
+
+            if inactive_device:
+                inactive_device.user_id = user.id
+                inactive_device.is_active = True
+
+                self.db.commit()
+
+                return
+
             device = Device(
                 user_id=user.id,
                 device_id=device_id,
@@ -59,3 +76,43 @@ class DeviceBindingService:
             ),
             status_code=403,
         )
+
+    def unbind_device(
+        self,
+        student_id: int,
+    ):
+        device = (
+            self.db.query(Device)
+            .filter(
+                Device.user_id == student_id,
+                Device.is_active,
+            )
+            .first()
+        )
+
+        if not device:
+            return
+
+        device.is_active = False
+
+        self.db.commit()
+
+    def self_unbind_device(
+        self,
+        user_id: int,
+    ):
+        device = (
+            self.db.query(Device)
+            .filter(
+                Device.user_id == user_id,
+                Device.is_active,
+            )
+            .first()
+        )
+
+        if not device:
+            return
+
+        device.is_active = False
+
+        self.db.commit()

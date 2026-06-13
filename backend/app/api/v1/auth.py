@@ -1,7 +1,11 @@
 # backend\app\api\v1\auth.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.schemas.auth import LoginRequest, TokenResponse
+from app.schemas.auth import (
+    LoginRequest,
+    TokenResponse,
+    ProfileResponse,
+)
 from app.core.security import verify_password
 from app.core.jwt import create_access_token
 from app.db.session import get_db
@@ -17,7 +21,7 @@ router = APIRouter(tags=["Auth"])
 @router.post("/login", response_model=TokenResponse)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     user = (
-        db.query(User).filter(User.email == data.email, User.is_active ).first()
+        db.query(User).filter(User.email == data.email, User.is_active).first()
     )
 
     if not user:
@@ -42,7 +46,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         .filter(
             Device.user_id == user.id,
             Device.device_id == data.device_uuid,
-            Device.is_active ,
+            Device.is_active,
         )
         .first()
     )
@@ -56,7 +60,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     # Kill previous auth sessions
     db.query(AuthSession).filter(
         AuthSession.user_id == user.id,
-        AuthSession.is_active ,
+        AuthSession.is_active,
     ).update({"is_active": False})
 
     # Create new session
@@ -78,6 +82,29 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/profile", response_model=ProfileResponse)
+def get_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    device = (
+        db.query(Device)
+        .filter(
+            Device.user_id == current_user.id,
+            Device.is_active,
+        )
+        .first()
+    )
+
+    return {
+        "user_id": current_user.id,
+        "role": current_user.role,
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "device_id": device.device_id if device else None,
+    }
+
+
 @router.post("/logout")
 def logout(
     db: Session = Depends(get_db),
@@ -85,7 +112,7 @@ def logout(
 ):
     db.query(AuthSession).filter(
         AuthSession.user_id == current_user.id,
-        AuthSession.is_active ,
+        AuthSession.is_active,
     ).update({"is_active": False})
 
     db.commit()
