@@ -398,3 +398,68 @@
 [2026-06-14 15:45:31] [INFO] Export complete: 4 files, 1 parts
 [2026-06-14 15:47:11] [INFO] Export complete: 2 files, 1 parts
 [2026-06-14 15:57:48] [INFO] Export complete: 4 files, 1 parts
+[2026-06-14 17:00:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/network/api_client.dart
+[2026-06-14 17:00:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-14 17:00:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/network/dio_client.dart
+[2026-06-14 17:00:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-14 17:00:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/network/api_service.dart
+[2026-06-14 17:00:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and also one existing feature service, preferably:
+[2026-06-14 17:00:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-14 17:01:01] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 17:12:59] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/home/presentation/home_screen.dart
+[2026-06-14 17:13:01] [INFO] Export complete: 1 files, 1 parts
+[2026-06-14 17:14:25] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/home/presentation/home_screen.dart
+[2026-06-14 17:14:25] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/auth/domain/auth_state.dart
+[2026-06-14 17:14:25] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/navigation/app_router.dart
+[2026-06-14 17:14:27] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/home/presentation/home_screen.dart
+[2026-06-14 17:14:27] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/auth/domain/auth_state.dart
+[2026-06-14 17:14:27] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/navigation/app_router.dart
+[2026-06-14 17:14:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/home/presentation/home_screen.dart
+[2026-06-14 17:14:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/auth/domain/auth_state.dart
+[2026-06-14 17:14:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/navigation/app_router.dart
+[2026-06-14 17:14:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/navigation/app_router.dart
+[2026-06-14 17:14:57] [INFO] Export complete: 1 files, 1 parts
+[2026-06-14 17:17:20] [INFO] Export complete: 15 files, 1 parts
+[2026-06-14 17:26:40] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/home/presentation/home_screen.dart
+[2026-06-14 17:26:44] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/home/presentation/home_screen.dart
+[2026-06-14 17:27:37] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/home/presentation/home_screen.dart
+[2026-06-14 17:27:38] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 18:17:26] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/attendance_validation_service.py
+[2026-06-14 18:17:26] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/ble_validation_service.py
+[2026-06-14 18:17:26] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/evidence_fusion_service.py
+[2026-06-14 18:17:29] [INFO] Export complete: 19 files, 1 parts
+[2026-06-14 18:19:49] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 18:20:05] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/attendance_validation_service.py
+[2026-06-14 18:20:05] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/ble_validation_service.py
+[2026-06-14 18:20:05] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/evidence_fusion_service.py
+[2026-06-14 18:20:08] [INFO] Export complete: 19 files, 1 parts
+[2026-06-14 18:20:17] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/attendance_validation_service.py
+[2026-06-14 18:20:17] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/ble_validation_service.py
+[2026-06-14 18:20:17] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/evidence_fusion_service.py
+[2026-06-14 18:20:18] [INFO] Export complete: 19 files, 1 parts
+[2026-06-14 18:22:49] [INFO] Export complete: 3 files, 1 parts
+[2026-06-14 18:23:15] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 18:26:19] [INFO] Export complete: 1 files, 1 parts
+[2026-06-14 18:27:17] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/screens/attendance_evidence_screen.dart
+[2026-06-14 18:27:17] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/services/faculty_api_service.dart
+[2026-06-14 18:27:19] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 18:28:26] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/screens/attendance_evidence_screen.dart
+[2026-06-14 18:28:28] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/screens/attendance_evidence_screen.dart
+[2026-06-14 18:28:28] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/screens/attendance_evidence_screen.dart
+[2026-06-14 18:28:28] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/screens/attendance_evidence_screen.dart
+[2026-06-14 18:28:50] [INFO] Export complete: 7 files, 1 parts
+[2026-06-14 21:43:11] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/presentation/faculty_courses_screen.dart
+[2026-06-14 21:43:11] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/presentation/course_detail_screen.dart
+[2026-06-14 21:43:11] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/presentation/student_attendance_history_screen.dart
+[2026-06-14 21:45:16] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 21:46:24] [INFO] Export complete: 1 files, 1 parts
+[2026-06-14 21:54:51] [INFO] Export complete: 1 files, 1 parts
+[2026-06-14 22:11:35] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/services/faculty_api_service.dart
+[2026-06-14 22:11:37] [INFO] Export complete: 4 files, 1 parts
+[2026-06-14 22:13:39] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/services/faculty_api_service.dart
+[2026-06-14 22:14:16] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/services/faculty_api_service.dart
+[2026-06-14 22:14:19] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 22:14:49] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/services/faculty_api_service.dart
+[2026-06-14 22:14:51] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 22:15:28] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty/services/faculty_api_service.dart
+[2026-06-14 22:15:36] [INFO] Export complete: 2 files, 1 parts

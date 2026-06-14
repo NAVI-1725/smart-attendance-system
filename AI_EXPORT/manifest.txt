@@ -3,8 +3,6 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  backend/app/core/domain_rules.py
-  backend/app/models/attendance.py
+  backend/app/core/constants/security_constants.py
   backend/app/models/attendance_ble_evidence.py
-  backend/app/models/attendance_gps_evidence.py
 

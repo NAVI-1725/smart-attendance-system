@@ -8,6 +8,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_beacon_payload.dart';
 import 'ble_scan_result.dart';
 import 'ble_service.dart';
+import 'bluetooth_disabled_exception.dart';
 
 class FlutterBleService implements BleService {
   static const Set<String> deviceNames = {
@@ -25,6 +26,16 @@ class FlutterBleService implements BleService {
 
   @override
   Future<BleBeaconPayload> readBeaconPayload() async {
+    final state =
+        await FlutterBluePlus
+            .adapterState
+            .first;
+
+    if (state !=
+        BluetoothAdapterState.on) {
+      throw BluetoothDisabledException();
+    }
+
     BluetoothDevice? targetDevice;
 
     await FlutterBluePlus.startScan(
@@ -161,6 +172,16 @@ class FlutterBleService implements BleService {
   Future<List<BleScanResult>> scan({
     required Duration duration,
   }) async {
+    final state =
+        await FlutterBluePlus
+            .adapterState
+            .first;
+
+    if (state !=
+        BluetoothAdapterState.on) {
+      throw BluetoothDisabledException();
+    }
+
     final Map<String, List<_PendingScanSample>>
         pendingSamplesPerDevice = {};
 

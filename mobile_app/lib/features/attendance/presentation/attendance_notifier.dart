@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/ble/ble_service.dart';
 import '../../../core/services/ble/ble_scan_sample.dart';
+import '../../../core/services/ble/bluetooth_disabled_exception.dart';
 import '../../../core/services/ble/evaluation/ble_consistency_evaluator.dart';
 import '../../../core/services/ble/evaluation/ble_consistency_result.dart';
 import '../../../core/services/ble/evaluation/ble_evidence_mapper.dart';
@@ -128,6 +129,10 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       } else if (e is SessionClosedException) {
         errorMessage =
             'Session closed';
+      } else if (
+          e is BluetoothDisabledException) {
+        errorMessage =
+            'Bluetooth is turned off';
       } else if (
           e is LocationDisabledException ||
           e is LocationPermissionDeniedException ||

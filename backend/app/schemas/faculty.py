@@ -1,4 +1,7 @@
-# backend/app/schemas/faculty.py
+################################################################################
+# FILE: backend/app/schemas/faculty.py
+################################################################################
+
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -31,6 +34,22 @@ class AttendanceDetailResponse(BaseModel):
     session_id: int
     status: AttendanceStatus
 
+    student_name: str
+    course_name: str
+
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+
+    resolution_reason: str | None
+
+
+class FlaggedAttendanceItem(BaseModel):
+    attendance_id: int
+    student_name: str
+    course_name: str
+    status: str
+    timestamp: datetime
+
 
 class BleEvidenceResponse(BaseModel):
     beacon_data: dict | None
@@ -50,6 +69,9 @@ class GpsEvidenceResponse(BaseModel):
 class AttendanceEvidenceResponse(BaseModel):
     ble: list[BleEvidenceResponse]
     gps: GpsEvidenceResponse | None
+
+    client_timestamp: datetime | None
+    server_received_timestamp: datetime | None
 
 
 class FacultyDashboardResponse(BaseModel):

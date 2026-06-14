@@ -233,7 +233,11 @@ def validate_ble_attendance(
     print("OVERALL =", ble.overall)
     print("VARIANCE =", beacon.variance)
 
-    if ble.overall not in ("STRONG", "MEDIUM"):
+    if ble.overall not in (
+        "IMMEDIATE",
+        "NEAR",
+        "MEDIUM",
+    ):
         return AttendanceStatus.FLAGGED
 
     print("OVERALL =", ble.overall)

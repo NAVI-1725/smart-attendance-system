@@ -180,6 +180,12 @@ def submit_attendance(
             ble_row = AttendanceBleEvidence(
                 attendance_id=attendance.id,
                 ble_payload=data.ble_evidence.dict(),
+                client_timestamp=(
+                    data.gps_evidence.captured_at
+                ),
+                server_received_timestamp=(
+                    datetime.now(timezone.utc)
+                ),
             )
 
             db.add(ble_row)

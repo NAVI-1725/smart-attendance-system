@@ -4,8 +4,7 @@ FOLDER STRUCTURE
 └── backend
     └── app
         ├── core
-            └── domain_rules.py
+            └── constants
+                └── security_constants.py
         └── models
-            ├── attendance.py
-            ├── attendance_ble_evidence.py
-            └── attendance_gps_evidence.py
+            └── attendance_ble_evidence.py
