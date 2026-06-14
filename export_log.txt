@@ -389,3 +389,12 @@
 [2026-06-14 01:06:37] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/profile/data/device_management_api_service.dart
 [2026-06-14 01:06:37] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/profile/data/device_management_api_service.dart
 [2026-06-14 01:06:39] [INFO] Export complete: 6 files, 1 parts
+[2026-06-14 02:05:28] [INFO] Export complete: 9 files, 1 parts
+[2026-06-14 02:07:38] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/faculty
+[2026-06-14 02:07:38] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/router
+[2026-06-14 02:07:44] [INFO] Export complete: 33 files, 1 parts
+[2026-06-14 15:44:22] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 15:44:54] [INFO] Export complete: 3 files, 1 parts
+[2026-06-14 15:45:31] [INFO] Export complete: 4 files, 1 parts
+[2026-06-14 15:47:11] [INFO] Export complete: 2 files, 1 parts
+[2026-06-14 15:57:48] [INFO] Export complete: 4 files, 1 parts

@@ -1,6 +1,13 @@
 # backend/app/models/attendance.py
 
-from sqlalchemy import Column, Integer, ForeignKey, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    ForeignKey,
+    UniqueConstraint,
+    DateTime,
+    Text,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import Enum as SqlEnum
 
@@ -44,6 +51,22 @@ class AttendanceAttempt(Base):
             name="attendance_status",
         ),
         nullable=False,
+    )
+
+    reviewed_by = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+
+    reviewed_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    resolution_reason = Column(
+        Text,
+        nullable=True,
     )
 
     ble_evidence = relationship(

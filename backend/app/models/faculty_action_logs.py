@@ -24,6 +24,11 @@ class FacultyActionLog(Base):
     original_status = Column(String(20), nullable=False)
     new_status = Column(String(20), nullable=False)
 
+    resolution_type = Column(
+        String(20),
+        nullable=False,
+    )
+
     reason = Column(Text, nullable=False)
 
     created_at = Column(

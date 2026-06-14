@@ -4,7 +4,10 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.models.enums import AttendanceSessionStatus
+from app.models.enums import (
+    AttendanceSessionStatus,
+    AttendanceStatus,
+)
 
 
 class StartSessionRequest(BaseModel):
@@ -44,3 +47,16 @@ class StudentActiveSessionResponse(BaseModel):
     expires_at: datetime
 
     status: AttendanceSessionStatus
+
+
+class SessionAttendanceRecord(BaseModel):
+    attendance_id: int
+    student_id: int
+    status: AttendanceStatus
+
+
+class SessionAttendanceResponse(BaseModel):
+    confirmed: int
+    flagged: int
+    rejected: int
+    records: list[SessionAttendanceRecord]

@@ -1,565 +1,434 @@
 ################################################################################
-FILE: backend/app/api/v1/devices.py
+FILE: backend/app/core/domain_rules.py
 ################################################################################
 
-# backend\app\api\v1\devices.py
-from fastapi import APIRouter, Depends, HTTPException, status
+################################################################################
+# FILE: backend/app/core/domain_rules.py
+################################################################################
+
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.models.device import Device
-from app.models.user import User
-from app.core.auth import get_current_user
+from app.models.enrollment import Enrollment
+from app.models.attendance import AttendanceAttempt
+from app.models.attendance_session import AttendanceSession
+from app.models.classroom import Classroom
+from app.models.faculty_course import FacultyCourse
 from app.core.errors import ApiError, ErrorCode
-from app.services.device_binding_service import DeviceBindingService
-
-router = APIRouter(tags=["Devices"])
+from app.services.session_cleanup_service import deactivate_expired_sessions
 
 
-@router.post("/bind")
-def bind_device(
-    payload: dict,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+def ensure_student_enrolled_in_course(
+    db: Session,
+    student_id: int,
+    course_id: int,
 ):
-    device_id = payload.get("device_id")
-
-    if not device_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="device_id is required",
+    if (
+        not db.query(Enrollment)
+        .filter(
+            Enrollment.student_id == student_id,
+            Enrollment.course_id == course_id,
+        )
+        .first()
+    ):
+        raise ApiError(
+            ErrorCode.NOT_ENROLLED,
+            "Student not enrolled",
+            status_code=403,
         )
 
-    # 🔍 Check if user already has a registered device
-    existing_device = (
-        db.query(Device)
+
+def ensure_class_active(db: Session, classroom_id: int):
+    deactivate_expired_sessions(db)
+
+    now = datetime.now(timezone.utc)
+
+    session = (
+        db.query(AttendanceSession)
         .filter(
-            Device.user_id == current_user.id,
-            Device.is_active,
+            AttendanceSession.classroom_id == classroom_id,
+            AttendanceSession.is_active == True,
+            AttendanceSession.closed_at.is_(None),
+            AttendanceSession.expires_at > now,
         )
         .first()
     )
 
-    # ✅ FIRST-TIME BIND (THIS WAS MISSING)
-    if not existing_device:
-        new_device = Device(
-            user_id=current_user.id,
-            device_id=device_id,
-            is_active=True,
+    if not session:
+        raise ApiError(
+            ErrorCode.CLASS_NOT_ACTIVE,
+            "No active classroom",
+            status_code=404,
         )
-        db.add(new_device)
-        db.commit()
-        db.refresh(new_device)
 
-        return {"status": "device_bound"}
-
-    # ✅ SAME DEVICE → allow silently
-    if existing_device.device_id == device_id:
-        return {"status": "device_verified"}
-
-    # ❌ DIFFERENT DEVICE → reject
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=(
-            "This account is already registered on another device. "
-            "Please use your registered device or contact the academic office "
-            "to request a device reset."
-        ),
-    )
+    return session
 
 
-@router.post("/self-unbind")
-def self_unbind_device(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+def ensure_faculty_owns_classroom(
+    db: Session,
+    faculty_id: int,
+    classroom_id: int,
 ):
-    if current_user.role == "student":
+    if (
+        not db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
+            Classroom.faculty_id == faculty_id,
+        )
+        .first()
+    ):
         raise ApiError(
-            ErrorCode.FORBIDDEN,
-            "Students cannot reset devices",
+            ErrorCode.CLASSROOM_NOT_FOUND,
+            "Classroom not found",
+            status_code=404,
+        )
+
+
+def ensure_faculty_teaches_course(
+    db: Session,
+    faculty_id: int,
+    course_id: int,
+):
+    if (
+        not db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == faculty_id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    ):
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty not assigned to course",
             status_code=403,
         )
 
-    DeviceBindingService(
-        db,
-    ).self_unbind_device(
-        current_user.id,
+
+def ensure_faculty_owns_session(
+    db: Session,
+    faculty_id: int,
+    session_id: int,
+):
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == session_id,
+        )
+        .first()
     )
 
-    return {
-        "message": "Device unbound successfully",
-    }
-
-################################################################################
-END FILE: backend/app/api/v1/devices.py
-################################################################################
-
-################################################################################
-FILE: backend/app/services/device_binding_service.py
-################################################################################
-
-# backend\app\services\device_binding_service.py
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
-
-from app.models.device import Device
-from app.models.user import User
-from app.core.errors import ApiError, ErrorCode
-
-
-class DeviceBindingService:
-    def __init__(self, db: Session):
-        self.db = db
-
-    def bind_device(self, user: User, device_id: str):
-        device_id = device_id.strip().lower()
-
-        existing_device = (
-            self.db.query(Device)
-            .filter(Device.user_id == user.id, Device.is_active)
-            .first()
+    if not session:
+        raise ApiError(
+            ErrorCode.SESSION_MISSING,
+            "Session not found",
+            status_code=404,
         )
 
-        # Case 1: No device bound yet → bind
-        if not existing_device:
-            inactive_device = (
-                self.db.query(Device)
-                .filter(
-                    Device.device_id == device_id,
-                    Device.is_active == False,
-                )
-                .first()
-            )
-
-            if inactive_device:
-                inactive_device.user_id = user.id
-                inactive_device.is_active = True
-
-                self.db.commit()
-
-                return
-
-            device = Device(
-                user_id=user.id,
-                device_id=device_id,
-                is_active=True,
-            )
-
-            self.db.add(device)
-
-            try:
-                self.db.commit()
-            except IntegrityError:
-                self.db.rollback()
-
-                raise ApiError(
-                    ErrorCode.DEVICE_BINDING_CONFLICT,
-                    (
-                        "This account is already registered on another device. "
-                        "Please contact the academic office to reset device access."
-                    ),
-                    status_code=409,
-                )
-
-            return
-
-        # Case 2: Same device → allow
-        if existing_device.device_id == device_id:
-            return
-
-        # Case 3: Different device → BLOCK
+    if session.faculty_id != faculty_id:
         raise ApiError(
-            ErrorCode.DEVICE_BINDING_CONFLICT,
-            (
-                "This account is already registered on another device. "
-                "Please contact the academic office to reset device access."
-            ),
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own session",
             status_code=403,
         )
 
-    def unbind_device(
-        self,
-        student_id: int,
-    ):
-        device = (
-            self.db.query(Device)
-            .filter(
-                Device.user_id == student_id,
-                Device.is_active,
-            )
-            .first()
+    return session
+
+
+def ensure_faculty_owns_attendance(
+    db: Session,
+    faculty_id: int,
+    attendance_id: int,
+):
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance not found",
+            status_code=404,
         )
 
-        if not device:
-            return
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == attendance.session_id,
+        )
+        .first()
+    )
 
-        device.is_active = False
-
-        self.db.commit()
-
-    def self_unbind_device(
-        self,
-        user_id: int,
-    ):
-        device = (
-            self.db.query(Device)
-            .filter(
-                Device.user_id == user_id,
-                Device.is_active,
-            )
-            .first()
+    if not session or session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own attendance",
+            status_code=403,
         )
 
-        if not device:
-            return
-
-        device.is_active = False
-
-        self.db.commit()
+    return attendance
 
 ################################################################################
-END FILE: backend/app/services/device_binding_service.py
+END FILE: backend/app/core/domain_rules.py
 ################################################################################
 
 ################################################################################
-FILE: mobile_app/lib/features/auth/presentation/auth_state.dart
+FILE: backend/app/models/attendance.py
 ################################################################################
 
-// mobile_app\lib\features\auth\presentation\auth_state.dart
-class AuthState {
-  final bool isAuthenticated;
-  final bool isLoading;
-  final String? error;
-  final String? role;
+# backend/app/models/attendance.py
 
-  const AuthState({
-    required this.isAuthenticated,
-    this.isLoading = false,
-    this.error,
-    this.role,
-  });
+from sqlalchemy import Column, Integer, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship
+from sqlalchemy.types import Enum as SqlEnum
 
-  factory AuthState.initial() {
-    return const AuthState(
-      isAuthenticated: false,
-      isLoading: false,
-      role: null,
-    );
-  }
+from app.db.base_class import Base
+from app.models.enums import AttendanceStatus
 
-  AuthState copyWith({
-    bool? isAuthenticated,
-    bool? isLoading,
-    String? error,
-    String? role,
-  }) {
-    return AuthState(
-      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      isLoading: isLoading ?? this.isLoading,
-      error: error,
-      role: role ?? this.role,
-    );
-  }
-}
 
-################################################################################
-END FILE: mobile_app/lib/features/auth/presentation/auth_state.dart
-################################################################################
+class AttendanceAttempt(Base):
+    __tablename__ = "attendance"
 
-################################################################################
-FILE: mobile_app/lib/features/profile/data/profile_api_service.dart
-################################################################################
+    __table_args__ = (UniqueConstraint("student_id", "session_id"),)
 
-// mobile_app/lib/features/profile/data/profile_api_service.dart
+    id = Column(Integer, primary_key=True)
 
-import 'package:dio/dio.dart';
+    # STEP 2.3 — Attendance Graph Wiring
+    student_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
 
-import '../../../core/services/api_client.dart';
-import '../domain/profile_model.dart';
+    classroom_id = Column(
+        Integer,
+        ForeignKey("classrooms.id"),
+        nullable=False,
+        index=True,
+    )
 
-class ProfileApiService {
-  final ApiClient _apiClient;
+    session_id = Column(
+        Integer,
+        ForeignKey("attendance_sessions.id"),
+        nullable=False,
+        index=True,
+    )
 
-  ProfileApiService(this._apiClient);
-
-  Future<ProfileModel> getProfile() async {
-    final Response response = await _apiClient.dio.get(
-      '/auth/profile',
-    );
-
-    return ProfileModel.fromJson(
-      response.data as Map<String, dynamic>,
-    );
-  }
-}
-
-################################################################################
-END FILE: mobile_app/lib/features/profile/data/profile_api_service.dart
-################################################################################
-
-################################################################################
-FILE: mobile_app/lib/features/profile/domain/profile_model.dart
-################################################################################
-
-// mobile_app/lib/features/profile/domain/profile_model.dart
-
-class ProfileModel {
-  final int userId;
-  final String role;
-  final String fullName;
-  final String email;
-  final String? deviceId;
-
-  const ProfileModel({
-    required this.userId,
-    required this.role,
-    required this.fullName,
-    required this.email,
-    required this.deviceId,
-  });
-
-  factory ProfileModel.fromJson(
-    Map<String, dynamic> json,
-  ) {
-    return ProfileModel(
-      userId: json['user_id'] as int,
-      role: json['role'] as String,
-      fullName: json['full_name'] as String,
-      email: json['email'] as String,
-      deviceId: json['device_id'] as String?,
-    );
-  }
-}
-
-################################################################################
-END FILE: mobile_app/lib/features/profile/domain/profile_model.dart
-################################################################################
-
-################################################################################
-FILE: mobile_app/lib/features/profile/presentation/profile_screen.dart
-################################################################################
-
-// mobile_app/lib/features/profile/presentation/profile_screen.dart
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../auth/presentation/auth_provider.dart';
-import 'profile_provider.dart';
-
-class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  ConsumerState<ProfileScreen> createState() =>
-      _ProfileScreenState();
-}
-
-class _ProfileScreenState
-    extends ConsumerState<ProfileScreen> {
-  @override
-  void initState() {
-    super.initState();
-
-    Future.microtask(() {
-      ref
-          .read(
-            profileNotifierProvider.notifier,
-          )
-          .loadProfile();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = ref.watch(
-      profileNotifierProvider,
-    );
-
-    final authState = ref.watch(
-      authNotifierProvider,
-    );
-
-    final role = authState.role;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Profile',
+    # STEP 3.1 — Attendance Status ENUM Enforcement
+    status = Column(
+        SqlEnum(
+            AttendanceStatus,
+            name="attendance_status",
         ),
-      ),
-      body: Builder(
-        builder: (context) {
-          if (state.isLoading) {
-            return const Center(
-              child:
-                  CircularProgressIndicator(),
-            );
-          }
+        nullable=False,
+    )
 
-          if (state.error != null) {
-            return Center(
-              child: Card(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize:
-                        MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.person_off,
-                        size: 48,
-                      ),
-                      const SizedBox(
-                        height: 16,
-                      ),
-                      const Text(
-                        'Unable to load profile',
-                      ),
-                      const SizedBox(
-                        height: 8,
-                      ),
-                      const Text(
-                        'Please try again later.',
-                      ),
-                      const SizedBox(
-                        height: 16,
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          ref
-                              .read(
-                                profileNotifierProvider
-                                    .notifier,
-                              )
-                              .loadProfile();
-                        },
-                        child: const Text(
-                          'Retry',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
+    ble_evidence = relationship(
+        "AttendanceBleEvidence",
+        back_populates="attendance",
+        cascade="all, delete-orphan",
+    )
 
-          final profile = state.profile;
-
-          if (profile == null) {
-            return const Center(
-              child: Text(
-                'Unable to load profile',
-              ),
-            );
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
-              children: [
-                Card(
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          profile.role.toLowerCase() == 'admin'
-                              ? 'Admin ID: ${profile.userId}'
-                              : profile.role.toLowerCase() == 'faculty'
-                                  ? 'Faculty ID: ${profile.userId}'
-                                  : 'Student ID: ${profile.userId}',
-                        ),
-                        const SizedBox(
-                          height: 12,
-                        ),
-                        Text(
-                          'Full Name: ${profile.fullName}',
-                        ),
-                        const SizedBox(
-                          height: 12,
-                        ),
-                        Text(
-                          'Email: ${profile.email}',
-                        ),
-                        const SizedBox(
-                          height: 12,
-                        ),
-                        Text(
-                          'Registered Device: ${profile.deviceId ?? 'Not Available'}',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(
-                  height: 16,
-                ),
-                if (role == 'student')
-                  Material(
-                    borderRadius:
-                        BorderRadius.circular(8),
-                    color:
-                        Colors.blue.withValues(
-                      alpha: 0.1,
-                    ),
-                    child: const Padding(
-                      padding:
-                          EdgeInsets.all(16),
-                      child: Text(
-                        'Device changes require administrator approval.',
-                      ),
-                    ),
-                  )
-                else if (role == 'faculty')
-                  Material(
-                    borderRadius:
-                        BorderRadius.circular(8),
-                    color:
-                        Colors.blue.withValues(
-                      alpha: 0.1,
-                    ),
-                    child: const Padding(
-                      padding:
-                          EdgeInsets.all(16),
-                      child: Text(
-                        'You may reset your own device from Account Settings.',
-                      ),
-                    ),
-                  )
-                else if (role == 'admin')
-                  Material(
-                    borderRadius:
-                        BorderRadius.circular(8),
-                    color:
-                        Colors.blue.withValues(
-                      alpha: 0.1,
-                    ),
-                    child: const Padding(
-                      padding:
-                          EdgeInsets.all(16),
-                      child: Text(
-                        'You can manage device access for all users.',
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
+    gps_evidence = relationship(
+        "AttendanceGpsEvidence",
+        back_populates="attendance",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
 ################################################################################
-END FILE: mobile_app/lib/features/profile/presentation/profile_screen.dart
+END FILE: backend/app/models/attendance.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/attendance_ble_evidence.py
+################################################################################
+
+# backend\app\models\attendance_ble_evidence.py
+from sqlalchemy import Column, Integer, ForeignKey, JSON, DateTime, func
+from sqlalchemy.orm import relationship
+
+# IMPORTANT:
+# Import Base from base_class to avoid circular imports with app.db.base
+from app.db.base_class import Base
+
+
+class AttendanceBleEvidence(Base):
+    __tablename__ = "attendance_ble_evidence"
+
+    id = Column(Integer, primary_key=True)
+
+    attendance_id = Column(
+        Integer,
+        ForeignKey("attendance.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    ble_payload = Column(JSON, nullable=False)
+
+    # Future-proof forensic/replay-analysis support fields.
+    # Kept nullable to avoid breaking existing flows and migrations.
+    device_id = Column(Integer, nullable=True)
+
+    client_timestamp = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    server_received_timestamp = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    # Use the REAL model class name
+    attendance = relationship(
+        "AttendanceAttempt",
+        back_populates="ble_evidence",
+    )
+
+
+################################################################################
+END FILE: backend/app/models/attendance_ble_evidence.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/attendance_gps_evidence.py
+################################################################################
+
+# backend/app/models/attendance_gps_evidence.py
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    Float,
+    Text,
+    ForeignKey,
+    DateTime,
+    func,
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy.types import Enum as SqlEnum
+
+from app.db.base_class import Base
+from app.models.enums import GPSValidationResult
+
+
+class AttendanceGpsEvidence(Base):
+    """
+    Immutable GPS evidence snapshot captured during an attendance attempt.
+
+    Raw Evidence:
+        - latitude
+        - longitude
+        - accuracy_meters
+        - captured_at
+
+    Evaluation Snapshot:
+        - distance_from_classroom_meters
+        - validation_result
+        - validation_reason
+
+    Notes:
+        - One GPS evidence record per AttendanceAttempt.
+        - Validation fields are nullable because Part B introduces
+          persistence only. Validation logic arrives in later phases.
+    """
+
+    __tablename__ = "attendance_gps_evidence"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+    )
+
+    attendance_id = Column(
+        Integer,
+        ForeignKey(
+            "attendance.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+
+    # ------------------------------------------------------------------
+    # Raw GPS Evidence
+    # ------------------------------------------------------------------
+
+    latitude = Column(
+        Float,
+        nullable=False,
+    )
+
+    longitude = Column(
+        Float,
+        nullable=False,
+    )
+
+    accuracy_meters = Column(
+        Float,
+        nullable=False,
+    )
+
+    captured_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+
+    # ------------------------------------------------------------------
+    # Evaluation Snapshot
+    # ------------------------------------------------------------------
+
+    distance_from_classroom_meters = Column(
+        Float,
+        nullable=True,
+    )
+
+    validation_result = Column(
+        SqlEnum(
+            GPSValidationResult,
+            name="gps_validation_result",
+        ),
+        nullable=True,
+    )
+
+    validation_reason = Column(
+        Text,
+        nullable=True,
+    )
+
+    # ------------------------------------------------------------------
+    # Audit Metadata
+    # ------------------------------------------------------------------
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    # ------------------------------------------------------------------
+    # Relationships
+    # ------------------------------------------------------------------
+
+    attendance = relationship(
+        "AttendanceAttempt",
+        back_populates="gps_evidence",
+    )
+
+################################################################################
+END FILE: backend/app/models/attendance_gps_evidence.py
 ################################################################################
 

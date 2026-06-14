@@ -3,10 +3,8 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  backend/app/api/v1/devices.py
-  backend/app/services/device_binding_service.py
-  mobile_app/lib/features/auth/presentation/auth_state.dart
-  mobile_app/lib/features/profile/data/profile_api_service.dart
-  mobile_app/lib/features/profile/domain/profile_model.dart
-  mobile_app/lib/features/profile/presentation/profile_screen.dart
+  backend/app/core/domain_rules.py
+  backend/app/models/attendance.py
+  backend/app/models/attendance_ble_evidence.py
+  backend/app/models/attendance_gps_evidence.py
 

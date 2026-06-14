@@ -1,16 +1,29 @@
 # backend/app/api/v1/faculty.py
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.dependencies import get_current_user, get_db, require_faculty
-from app.core.domain_rules import ensure_faculty_owns_classroom
+from app.core.domain_rules import (
+    ensure_faculty_owns_attendance,
+    ensure_faculty_owns_classroom,
+)
 from app.models.attendance import AttendanceAttempt
 from app.models.enums import AttendanceStatus
 from app.models.faculty_action_logs import FacultyActionLog
 from app.models.attendance_session import AttendanceSession
-from app.schemas.faculty import AttendanceSummaryResponse
+from app.schemas.faculty import (
+    AttendanceDetailResponse,
+    AttendanceEvidenceResponse,
+    AttendanceSummaryResponse,
+    BleEvidenceResponse,
+    FacultyDashboardResponse,
+    FacultySessionHistoryItem,
+    GpsEvidenceResponse,
+)
 from app.schemas.faculty_resolution import FacultyResolutionRequest
 
 router = APIRouter(
@@ -52,11 +65,14 @@ def resolve_attendance(
         attendance.classroom_id,
     )
 
-    # 4️⃣ Only FLAGGED can be resolved
-    if attendance.status != AttendanceStatus.FLAGGED:
+    # 4️⃣ Idempotent review enforcement
+    if attendance.status in (
+        AttendanceStatus.CONFIRMED,
+        AttendanceStatus.REJECTED,
+    ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only FLAGGED attendance can be resolved",
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attendance already reviewed",
         )
 
     original_status = attendance.status
@@ -64,12 +80,26 @@ def resolve_attendance(
     # 5️⃣ Apply resolution
     attendance.status = data.new_status
 
+    attendance.reviewed_by = current_user.id
+
+    attendance.reviewed_at = datetime.now(
+        timezone.utc,
+    )
+
+    attendance.resolution_reason = data.reason
+
     # 6️⃣ Immutable audit log (exam-critical)
     log = FacultyActionLog(
         faculty_id=current_user.id,
         attendance_id=attendance.id,
         original_status=original_status.value,
         new_status=data.new_status.value,
+        resolution_type=(
+            "CONFIRM"
+            if data.new_status
+            == AttendanceStatus.CONFIRMED
+            else "REJECT"
+        ),
         reason=data.reason,
     )
 
@@ -79,7 +109,151 @@ def resolve_attendance(
     return {"status": "resolved"}
 
 
-@router.get("/sessions")
+@router.get(
+    "/attendance/{attendance_id}",
+    response_model=AttendanceDetailResponse,
+)
+def get_attendance_detail(
+    attendance_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=attendance_id,
+    )
+
+    return {
+        "attendance_id": attendance.id,
+        "student_id": attendance.student_id,
+        "session_id": attendance.session_id,
+        "status": attendance.status,
+    }
+
+
+@router.get(
+    "/attendance/{attendance_id}/evidence",
+    response_model=AttendanceEvidenceResponse,
+)
+def get_attendance_evidence(
+    attendance_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=attendance_id,
+    )
+
+    ble_evidence = [
+        {
+            "beacon_data": evidence.ble_payload,
+            "client_timestamp": evidence.client_timestamp,
+            "server_received_timestamp": evidence.server_received_timestamp,
+        }
+        for evidence in attendance.ble_evidence
+    ]
+
+    gps = attendance.gps_evidence
+
+    gps_evidence = None
+    if gps:
+        gps_evidence = {
+            "latitude": gps.latitude,
+            "longitude": gps.longitude,
+            "accuracy_meters": gps.accuracy_meters,
+            "distance_from_classroom_meters": gps.distance_from_classroom_meters,
+            "validation_result": gps.validation_result,
+            "validation_reason": gps.validation_reason,
+        }
+
+    return {
+        "ble": ble_evidence,
+        "gps": gps_evidence,
+    }
+
+
+@router.get(
+    "/dashboard",
+    response_model=FacultyDashboardResponse,
+)
+def get_dashboard(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    today_start = datetime.now(
+        timezone.utc,
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+
+    active_sessions = (
+        db.query(func.count(AttendanceSession.id))
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceSession.is_active == True,
+        )
+        .scalar()
+    )
+
+    flagged_attendance = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.FLAGGED,
+        )
+        .scalar()
+    )
+
+    confirmed_today = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.CONFIRMED,
+            AttendanceAttempt.reviewed_at >= today_start,
+        )
+        .scalar()
+    )
+
+    rejected_today = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.REJECTED,
+            AttendanceAttempt.reviewed_at >= today_start,
+        )
+        .scalar()
+    )
+
+    return {
+        "active_sessions": active_sessions,
+        "flagged_attendance": flagged_attendance,
+        "confirmed_today": confirmed_today,
+        "rejected_today": rejected_today,
+    }
+
+
+@router.get(
+    "/sessions",
+    response_model=list[FacultySessionHistoryItem],
+)
 def get_faculty_sessions(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -91,7 +265,16 @@ def get_faculty_sessions(
         .all()
     )
 
-    return sessions
+    return [
+        {
+            "session_id": session.id,
+            "course_name": session.course.course_name,
+            "status": session.status,
+            "started_at": session.started_at,
+            "closed_at": session.closed_at,
+        }
+        for session in sessions
+    ]
 
 
 @router.get(

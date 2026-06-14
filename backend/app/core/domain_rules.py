@@ -1,17 +1,18 @@
-# backend/app/core/domain_rules.py
+################################################################################
+# FILE: backend/app/core/domain_rules.py
+################################################################################
 
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.models.enrollment import Enrollment
+from app.models.attendance import AttendanceAttempt
 from app.models.attendance_session import AttendanceSession
 from app.models.classroom import Classroom
 from app.models.faculty_course import FacultyCourse
 from app.core.errors import ApiError, ErrorCode
-from app.services.session_cleanup_service import (
-    deactivate_expired_sessions,
-)
+from app.services.session_cleanup_service import deactivate_expired_sessions
 
 
 def ensure_student_enrolled_in_course(
@@ -35,7 +36,6 @@ def ensure_student_enrolled_in_course(
 
 
 def ensure_class_active(db: Session, classroom_id: int):
-
     deactivate_expired_sessions(db)
 
     now = datetime.now(timezone.utc)
@@ -99,3 +99,71 @@ def ensure_faculty_teaches_course(
             "Faculty not assigned to course",
             status_code=403,
         )
+
+
+def ensure_faculty_owns_session(
+    db: Session,
+    faculty_id: int,
+    session_id: int,
+):
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == session_id,
+        )
+        .first()
+    )
+
+    if not session:
+        raise ApiError(
+            ErrorCode.SESSION_MISSING,
+            "Session not found",
+            status_code=404,
+        )
+
+    if session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own session",
+            status_code=403,
+        )
+
+    return session
+
+
+def ensure_faculty_owns_attendance(
+    db: Session,
+    faculty_id: int,
+    attendance_id: int,
+):
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance not found",
+            status_code=404,
+        )
+
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == attendance.session_id,
+        )
+        .first()
+    )
+
+    if not session or session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own attendance",
+            status_code=403,
+        )
+
+    return attendance
