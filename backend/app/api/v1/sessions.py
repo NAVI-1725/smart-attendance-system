@@ -125,6 +125,8 @@ def close_session(
             status_code=403,
         )
 
+    deactivate_expired_sessions(db)
+
     session = ensure_faculty_owns_session(
         db=db,
         faculty_id=current_user.id,
@@ -174,6 +176,8 @@ def get_session_attendance(
             "Only faculty can view session attendance",
             status_code=403,
         )
+
+    deactivate_expired_sessions(db)
 
     session = ensure_faculty_owns_session(
         db=db,

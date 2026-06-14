@@ -500,3 +500,7 @@
 [2026-06-15 00:57:52] [INFO] Export complete: 9 files, 1 parts
 [2026-06-15 01:26:48] [INFO] Export complete: 2 files, 1 parts
 [2026-06-15 01:34:31] [INFO] Export complete: 2 files, 1 parts
+[2026-06-15 02:18:45] [INFO] Export complete: 3 files, 1 parts
+[2026-06-15 02:19:26] [INFO] Export complete: 4 files, 1 parts
+[2026-06-15 02:22:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-15 02:22:26] [INFO] Export complete: 2 files, 1 parts

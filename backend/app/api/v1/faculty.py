@@ -34,6 +34,9 @@ from app.schemas.faculty import (
     StudentHistoryItem,
 )
 from app.schemas.faculty_resolution import FacultyResolutionRequest
+from app.services.session_cleanup_service import (
+    deactivate_expired_sessions,
+)
 
 router = APIRouter(
     tags=["Faculty"],
@@ -49,6 +52,8 @@ def get_faculty_courses(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    deactivate_expired_sessions(db)
+
     courses = (
         db.query(
             Course,
@@ -110,6 +115,8 @@ def get_course_detail(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    deactivate_expired_sessions(db)
+
     course_assignment = (
         db.query(FacultyCourse)
         .filter(
@@ -465,6 +472,8 @@ def get_dashboard(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    deactivate_expired_sessions(db)
+
     today_start = datetime.now(
         timezone.utc,
     ).replace(
@@ -540,6 +549,8 @@ def get_faculty_sessions(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    deactivate_expired_sessions(db)
+
     sessions = (
         db.query(AttendanceSession)
         .filter(AttendanceSession.faculty_id == current_user.id)

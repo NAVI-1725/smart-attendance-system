@@ -3,6 +3,6 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  mobile_app/lib/features/faculty/presentation/session_monitor_screen.dart
-  mobile_app/lib/features/faculty/presentation/start_session_dialog.dart
+  backend/app/api/v1/faculty.py
+  backend/app/api/v1/sessions.py
 
