@@ -3,6 +3,8 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  backend/app/api/v1/faculty.py
-  backend/app/api/v1/sessions.py
+  backend/app/api/v1/attendance.py
+  backend/app/core/domain_rules.py
+  backend/app/models/attendance_session.py
+  backend/app/services/session_discovery_service.py
 

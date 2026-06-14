@@ -23,9 +23,9 @@ def deactivate_expired_sessions(db: Session):
     )
 
     for session in expired_sessions:
+        session.status = AttendanceSessionStatus.EXPIRED
         session.is_active = False
         session.closed_at = now
-        session.status = AttendanceSessionStatus.EXPIRED
 
     if expired_sessions:
         db.commit()

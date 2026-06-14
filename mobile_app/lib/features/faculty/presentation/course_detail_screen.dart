@@ -37,6 +37,9 @@ class _CourseDetailScreenState
 
   String _searchQuery = '';
 
+  // Risk filter: null = ALL, otherwise 'Good', 'Warning', 'Risk'
+  String? _riskFilter;
+
   @override
   void initState() {
     super.initState();
@@ -112,21 +115,34 @@ class _CourseDetailScreenState
   }
 
   List<CourseStudent> get _filteredStudents {
-    if (_searchQuery.isEmpty) {
-      return _students;
+    List<CourseStudent> result = _students;
+
+    // Apply risk filter first
+    if (_riskFilter != null) {
+      result = result.where((student) {
+        return _getAttendanceStatus(
+              student.attendancePercentage,
+            ) ==
+            _riskFilter;
+      }).toList();
     }
 
-    final query = _searchQuery.toLowerCase();
+    // Then apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
 
-    return _students.where((student) {
-      return student.studentName
-              .toLowerCase()
-              .contains(query) ||
-          student.studentId
-              .toString()
-              .toLowerCase()
-              .contains(query);
-    }).toList();
+      result = result.where((student) {
+        return student.studentName
+                .toLowerCase()
+                .contains(query) ||
+            student.studentId
+                .toString()
+                .toLowerCase()
+                .contains(query);
+      }).toList();
+    }
+
+    return result;
   }
 
   String _getAttendanceStatus(
@@ -373,6 +389,104 @@ class _CourseDetailScreenState
                       _searchQuery = value;
                     });
                   },
+                ),
+
+                const SizedBox(
+                  height: 12,
+                ),
+
+                // Risk filter chips: ALL / GOOD / WARNING / RISK
+                SingleChildScrollView(
+                  scrollDirection:
+                      Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FilterChip(
+                        label: const Text(
+                          'All',
+                        ),
+                        selected:
+                            _riskFilter == null,
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      FilterChip(
+                        label: const Text(
+                          'Good',
+                        ),
+                        selected:
+                            _riskFilter == 'Good',
+                        selectedColor:
+                            Colors.green
+                                .withOpacity(
+                          0.2,
+                        ),
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter =
+                                _riskFilter ==
+                                        'Good'
+                                    ? null
+                                    : 'Good';
+                          });
+                        },
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      FilterChip(
+                        label: const Text(
+                          'Warning',
+                        ),
+                        selected: _riskFilter ==
+                            'Warning',
+                        selectedColor:
+                            Colors.orange
+                                .withOpacity(
+                          0.2,
+                        ),
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter =
+                                _riskFilter ==
+                                        'Warning'
+                                    ? null
+                                    : 'Warning';
+                          });
+                        },
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      FilterChip(
+                        label: const Text(
+                          'Risk',
+                        ),
+                        selected:
+                            _riskFilter == 'Risk',
+                        selectedColor:
+                            Colors.red
+                                .withOpacity(
+                          0.2,
+                        ),
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter =
+                                _riskFilter ==
+                                        'Risk'
+                                    ? null
+                                    : 'Risk';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(

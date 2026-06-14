@@ -3,7 +3,12 @@ FOLDER STRUCTURE
 
 └── backend
     └── app
-        └── api
+        ├── api
             └── v1
-                ├── faculty.py
-                └── sessions.py
+                └── attendance.py
+        ├── core
+            └── domain_rules.py
+        ├── models
+            └── attendance_session.py
+        └── services
+            └── session_discovery_service.py

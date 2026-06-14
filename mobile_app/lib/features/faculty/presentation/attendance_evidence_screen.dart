@@ -227,7 +227,7 @@ class _BleEvidenceCard extends StatelessWidget {
                     ),
                     _EvidenceRow(
                       label:
-                          'RSSI',
+                          'Average RSSI',
                       value:
                           beaconData[
                                       'average_rssi']
@@ -240,6 +240,15 @@ class _BleEvidenceCard extends StatelessWidget {
                       value:
                           beaconData[
                                       'sample_count']
+                                  ?.toString() ??
+                              'N/A',
+                    ),
+                    _EvidenceRow(
+                      label:
+                          'Proximity',
+                      value:
+                          beaconData[
+                                      'proximity']
                                   ?.toString() ??
                               'N/A',
                     ),
@@ -263,11 +272,26 @@ class _BleEvidenceCard extends StatelessWidget {
                     ),
                     _EvidenceRow(
                       label:
-                          'Proximity',
+                          'Client Timestamp',
                       value:
                           beaconData[
-                                      'proximity']
+                                      'client_timestamp']
                                   ?.toString() ??
+                              evidence.clientTimestamp ??
+                              'N/A',
+                    ),
+                    _EvidenceRow(
+                      label:
+                          'Server Received Timestamp',
+                      value:
+                          beaconData[
+                                      'server_received_timestamp']
+                                  ?.toString() ??
+                              beaconData[
+                                      'server_received']
+                                  ?.toString() ??
+                              evidence
+                                  .serverReceivedTimestamp ??
                               'N/A',
                     ),
                     const Divider(
@@ -276,21 +300,6 @@ class _BleEvidenceCard extends StatelessWidget {
                   ];
                 },
               ),
-            _EvidenceRow(
-              label:
-                  'Client Timestamp',
-              value:
-                  evidence.clientTimestamp ??
-                  'N/A',
-            ),
-            _EvidenceRow(
-              label:
-                  'Server Received Timestamp',
-              value:
-                  evidence
-                      .serverReceivedTimestamp ??
-                  'N/A',
-            ),
           ],
         ),
       ),

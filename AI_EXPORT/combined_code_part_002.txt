@@ -1,0 +1,2250 @@
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/faculty_courses_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/faculty_courses_screen.dart
+
+import 'package:flutter/material.dart';
+
+import '../../../core/config/app_bootstrap.dart';
+import '../data/course_api_service.dart';
+import '../models/faculty_course.dart';
+import 'course_detail_screen.dart';
+
+class FacultyCoursesScreen extends StatefulWidget {
+  const FacultyCoursesScreen({
+    super.key,
+  });
+
+  @override
+  State<FacultyCoursesScreen> createState() =>
+      _FacultyCoursesScreenState();
+}
+
+class _FacultyCoursesScreenState
+    extends State<FacultyCoursesScreen> {
+  late final CourseApiService _apiService;
+
+  bool _isLoading = true;
+  String? _error;
+
+  List<FacultyCourse> _courses = [];
+
+  String _searchQuery = '';
+
+  List<FacultyCourse> get _filteredCourses {
+    if (_searchQuery.trim().isEmpty) {
+      return _courses;
+    }
+
+    final query =
+        _searchQuery.trim().toLowerCase();
+
+    return _courses.where((course) {
+      return course.courseCode
+              .toLowerCase()
+              .contains(query) ||
+          course.courseName
+              .toLowerCase()
+              .contains(query);
+    }).toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _apiService = CourseApiService(
+      AppBootstrap.apiClient,
+    );
+
+    _loadCourses();
+  }
+
+  Future<void> _loadCourses() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final courses =
+          await _apiService.getCourses();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _courses = courses;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = 'Unable to load courses';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refresh() async {
+    await _loadCourses();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'My Courses',
+        ),
+      ),
+      body: Builder(
+        builder: (context) {
+          if (_isLoading) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          if (_error != null) {
+            return Center(
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize.min,
+                children: [
+                  Text(_error!),
+                  const SizedBox(
+                    height: 12,
+                  ),
+                  ElevatedButton(
+                    onPressed:
+                        _loadCourses,
+                    child: const Text(
+                      'Retry',
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (_courses.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize.min,
+                children: [
+                  Text(
+                    'No Courses Assigned',
+                  ),
+                  SizedBox(
+                    height: 8,
+                  ),
+                  Text(
+                    'Contact Administrator',
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final filteredCourses =
+              _filteredCourses;
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding:
+                  const EdgeInsets.all(
+                12,
+              ),
+              children: [
+                TextField(
+                  decoration:
+                      const InputDecoration(
+                    hintText:
+                        'Search courses...',
+                    prefixIcon:
+                        Icon(Icons.search),
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                ),
+                const SizedBox(
+                  height: 12,
+                ),
+                if (filteredCourses.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding:
+                          EdgeInsets.all(
+                        16,
+                      ),
+                      child: Text(
+                        'No matching courses found',
+                      ),
+                    ),
+                  ),
+                ...filteredCourses.map(
+                  (course) {
+                    return Card(
+                      margin:
+                          const EdgeInsets.only(
+                        bottom: 12,
+                      ),
+                      child: ListTile(
+                        contentPadding:
+                            const EdgeInsets.all(
+                          16,
+                        ),
+                        title: Text(
+                          course.courseName,
+                          style:
+                              const TextStyle(
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+                        subtitle: Padding(
+                          padding:
+                              const EdgeInsets.only(
+                            top: 8,
+                          ),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            mainAxisSize:
+                                MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Course Code: ${course.courseCode}',
+                              ),
+                              const SizedBox(
+                                height: 4,
+                              ),
+                              Text(
+                                'Students: ${course.studentCount}',
+                              ),
+                              const SizedBox(
+                                height: 8,
+                              ),
+                              Container(
+                                padding:
+                                    const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration:
+                                    BoxDecoration(
+                                  color: course
+                                          .activeSession
+                                      ? Colors
+                                          .green
+                                          .withOpacity(
+                                          0.15,
+                                        )
+                                      : Colors
+                                          .grey
+                                          .withOpacity(
+                                          0.15,
+                                        ),
+                                  borderRadius:
+                                      BorderRadius
+                                          .circular(
+                                    12,
+                                  ),
+                                  border:
+                                      Border.all(
+                                    color: course
+                                            .activeSession
+                                        ? Colors
+                                            .green
+                                        : Colors
+                                            .grey,
+                                  ),
+                                ),
+                                child: Text(
+                                  course.activeSession
+                                      ? 'ACTIVE'
+                                      : 'INACTIVE',
+                                  style:
+                                      TextStyle(
+                                    color: course
+                                            .activeSession
+                                        ? Colors
+                                            .green
+                                        : Colors
+                                            .grey,
+                                    fontWeight:
+                                        FontWeight
+                                            .bold,
+                                    fontSize:
+                                        12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        trailing:
+                            const Icon(
+                          Icons.chevron_right,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CourseDetailScreen(
+                                courseId:
+                                    course
+                                        .courseId,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/faculty_courses_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/faculty_dashboard_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/faculty_dashboard_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../presentation/faculty_provider.dart';
+import 'faculty_courses_screen.dart';
+import 'faculty_sessions_screen.dart';
+import 'flagged_attendance_screen.dart';
+
+class FacultyDashboardScreen
+    extends ConsumerStatefulWidget {
+  const FacultyDashboardScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<FacultyDashboardScreen>
+      createState() =>
+          _FacultyDashboardScreenState();
+}
+
+class _FacultyDashboardScreenState
+    extends ConsumerState<FacultyDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) {
+        ref
+            .read(facultyProvider)
+            .loadDashboard();
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Faculty Dashboard',
+        ),
+      ),
+      body: Consumer(
+        builder: (
+          context,
+          ref,
+          _,
+        ) {
+          final provider = ref.watch(
+            facultyProvider,
+          );
+
+          if (provider.isLoading &&
+              provider.dashboard == null) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          final dashboard =
+              provider.dashboard;
+
+          if (dashboard == null) {
+            return const Center(
+              child: Text(
+                'No dashboard data available',
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadDashboard();
+            },
+            child: ListView(
+              padding:
+                  const EdgeInsets.all(16),
+              children: [
+                _DashboardCard(
+                  title: 'My Courses',
+                  value: 'View',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const FacultyCoursesScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _DashboardCard(
+                  title: 'Active Sessions',
+                  value: dashboard
+                      .activeSessions
+                      .toString(),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const FacultySessionsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _DashboardCard(
+                  title:
+                      'Flagged Attendance',
+                  value: dashboard
+                      .flaggedAttendance
+                      .toString(),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const FlaggedAttendanceScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _DashboardCard(
+                  title:
+                      'Confirmed Today',
+                  value: dashboard
+                      .confirmedToday
+                      .toString(),
+                ),
+                const SizedBox(height: 12),
+                _DashboardCard(
+                  title:
+                      'Rejected Today',
+                  value: dashboard
+                      .rejectedToday
+                      .toString(),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DashboardCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final VoidCallback? onTap;
+
+  const _DashboardCard({
+    required this.title,
+    required this.value,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius:
+            BorderRadius.circular(12),
+        child: Padding(
+          padding:
+              const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style:
+                    Theme.of(context)
+                        .textTheme
+                        .titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style:
+                    Theme.of(context)
+                        .textTheme
+                        .headlineMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/faculty_dashboard_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/faculty_session.dart';
+import 'faculty_provider.dart';
+import 'session_monitor_screen.dart';
+
+class FacultySessionsScreen
+    extends ConsumerStatefulWidget {
+  const FacultySessionsScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<FacultySessionsScreen>
+      createState() =>
+          _FacultySessionsScreenState();
+}
+
+class _FacultySessionsScreenState
+    extends ConsumerState<FacultySessionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) {
+        ref
+            .read(facultyProvider)
+            .loadSessions();
+      },
+    );
+  }
+
+  Future<void> _closeSession(
+    FacultySession session,
+  ) async {
+    await ref
+        .read(facultyProvider)
+        .closeSession(
+          session.sessionId,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    await ref
+        .read(facultyProvider)
+        .loadSessions();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Session closed successfully',
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(
+    DateTime? value,
+  ) {
+    if (value == null) {
+      return '-';
+    }
+
+    return value.toLocal().toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Faculty Sessions',
+        ),
+      ),
+      body: Consumer(
+        builder: (
+          context,
+          ref,
+          _,
+        ) {
+          final provider =
+              ref.watch(
+                facultyProvider,
+              );
+
+          if (provider.isLoading &&
+              provider.sessions.isEmpty) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          if (provider.sessions.isEmpty) {
+            return const Center(
+              child: Text(
+                'No sessions found',
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadSessions();
+            },
+            child: ListView.builder(
+              padding:
+                  const EdgeInsets.all(16),
+              itemCount:
+                  provider.sessions.length,
+              itemBuilder: (
+                context,
+                index,
+              ) {
+                final session =
+                    provider.sessions[index];
+
+                final isActive =
+                    session.status
+                            .toUpperCase() ==
+                        'ACTIVE';
+
+                return Card(
+                  margin:
+                      const EdgeInsets.only(
+                    bottom: 12,
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          'Session ID: ${session.sessionId}',
+                          style:
+                              const TextStyle(
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 8,
+                        ),
+                        Text(
+                          'Course: ${session.courseName}',
+                        ),
+                        Text(
+                          'Status: ${session.status}',
+                        ),
+                        Text(
+                          'Started: ${_formatDateTime(session.startedAt)}',
+                        ),
+                        Text(
+                          'Closed: ${_formatDateTime(session.closedAt)}',
+                        ),
+                        if (isActive) ...[
+                          const SizedBox(
+                            height: 16,
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child:
+                                    ElevatedButton(
+                                  onPressed:
+                                      provider
+                                              .isLoading
+                                          ? null
+                                          : () =>
+                                              _closeSession(
+                                            session,
+                                          ),
+                                  child:
+                                      const Text(
+                                    'Close Session',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(
+                                width: 12,
+                              ),
+                              Expanded(
+                                child:
+                                    ElevatedButton(
+                                  onPressed:
+                                      () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) =>
+                                                SessionMonitorScreen(
+                                          sessionId:
+                                              session
+                                                  .sessionId,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child:
+                                      const Text(
+                                    'Monitor',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/flagged_attendance_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/flagged_attendance_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'faculty_provider.dart';
+import 'attendance_detail_screen.dart';
+
+class FlaggedAttendanceScreen
+    extends ConsumerStatefulWidget {
+  const FlaggedAttendanceScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<FlaggedAttendanceScreen>
+      createState() =>
+          _FlaggedAttendanceScreenState();
+}
+
+class _FlaggedAttendanceScreenState
+    extends ConsumerState<FlaggedAttendanceScreen> {
+  final TextEditingController
+      _classroomIdController =
+      TextEditingController();
+
+  final TextEditingController
+      _searchController =
+      TextEditingController();
+
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _classroomIdController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAttendance() async {
+    final classroomId = int.tryParse(
+      _classroomIdController.text,
+    );
+
+    if (classroomId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Enter a valid classroom ID',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await ref
+        .read(facultyProvider)
+        .loadFlaggedAttendance(
+          classroomId: classroomId,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Flagged Attendance',
+        ),
+      ),
+      body: Consumer(
+        builder: (
+          context,
+          ref,
+          _,
+        ) {
+          final provider =
+              ref.watch(
+                facultyProvider,
+              );
+
+          final filteredAttendance =
+              provider.flaggedAttendance.where(
+            (attendance) {
+              if (_searchQuery
+                  .trim()
+                  .isEmpty) {
+                return true;
+              }
+
+              final query =
+                  _searchQuery
+                      .toLowerCase()
+                      .trim();
+
+              return attendance
+                      .attendanceId
+                      .toString()
+                      .contains(query) ||
+                  attendance.studentName
+                      .toLowerCase()
+                      .contains(query) ||
+                  attendance.courseName
+                      .toLowerCase()
+                      .contains(query);
+            },
+          ).toList();
+
+          return Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller:
+                            _classroomIdController,
+                        keyboardType:
+                            TextInputType.number,
+                        decoration:
+                            const InputDecoration(
+                          labelText:
+                              'Classroom ID',
+                          border:
+                              OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed:
+                          provider.isLoading
+                              ? null
+                              : _loadAttendance,
+                      child: const Text(
+                        'Load',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                child: TextField(
+                  controller:
+                      _searchController,
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Search Attendance ID, Student Name, Course Name',
+                    prefixIcon:
+                        Icon(Icons.search),
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: provider.isLoading
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(),
+                      )
+                    : ListView.builder(
+                        itemCount:
+                            filteredAttendance
+                                .length,
+                        itemBuilder:
+                            (context, index) {
+                          final attendance =
+                              filteredAttendance[
+                                  index];
+
+                          return Card(
+                            margin:
+                                const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            child: ListTile(
+                              title: Text(
+                                'Attendance #${attendance.attendanceId}',
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment
+                                        .start,
+                                children: [
+                                  Text(
+                                    'Student Name: ${attendance.studentName}',
+                                  ),
+                                  Text(
+                                    'Course Name: ${attendance.courseName}',
+                                  ),
+                                  Text(
+                                    'Timestamp: ${attendance.timestamp}',
+                                  ),
+                                  Text(
+                                    'Status: ${attendance.status}',
+                                  ),
+                                ],
+                              ),
+                              trailing: const Icon(
+                                Icons
+                                    .arrow_forward_ios,
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        AttendanceDetailScreen(
+                                      attendanceId:
+                                          attendance
+                                              .attendanceId,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/flagged_attendance_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/session_monitor_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/session_monitor_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/session_attendance.dart';
+import 'attendance_detail_screen.dart';
+import 'faculty_provider.dart';
+
+class SessionMonitorScreen
+    extends ConsumerStatefulWidget {
+  final int sessionId;
+
+  const SessionMonitorScreen({
+    super.key,
+    required this.sessionId,
+  });
+
+  @override
+  ConsumerState<SessionMonitorScreen>
+      createState() =>
+          _SessionMonitorScreenState();
+}
+
+class _SessionMonitorScreenState
+    extends ConsumerState<SessionMonitorScreen> {
+  final TextEditingController
+      _searchController =
+      TextEditingController();
+
+  String _searchQuery = '';
+
+  String _selectedFilter = 'ALL';
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) {
+        ref
+            .read(facultyProvider)
+            .loadSessionAttendance(
+              widget.sessionId,
+            );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Session ${widget.sessionId} Monitoring',
+        ),
+      ),
+      body: Consumer(
+        builder: (
+          context,
+          ref,
+          _,
+        ) {
+          final provider =
+              ref.watch(
+                facultyProvider,
+              );
+
+          if (provider.isLoading &&
+              provider.sessionAttendance ==
+                  null) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          final attendance =
+              provider.sessionAttendance;
+
+          if (attendance == null) {
+            return const Center(
+              child: Text(
+                'No attendance data available',
+              ),
+            );
+          }
+
+          final filteredRecords =
+              attendance.records.where(
+            (
+              SessionAttendanceRecord
+                  record,
+            ) {
+              final query =
+                  _searchQuery
+                      .trim()
+                      .toLowerCase();
+
+              final matchesSearch =
+                  query.isEmpty ||
+                      record.attendanceId
+                          .toString()
+                          .contains(
+                            query,
+                          ) ||
+                      record.studentId
+                          .toString()
+                          .contains(
+                            query,
+                          );
+
+              final matchesFilter =
+                  _selectedFilter ==
+                          'ALL' ||
+                      record.status
+                              .toUpperCase() ==
+                          _selectedFilter;
+
+              return matchesSearch &&
+                  matchesFilter;
+            },
+          ).toList();
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider
+                  .loadSessionAttendance(
+                widget.sessionId,
+              );
+            },
+            child: ListView(
+              padding:
+                  const EdgeInsets.all(16),
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SummaryCard(
+                        title: 'Confirmed',
+                        value: attendance
+                            .confirmed
+                            .toString(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _SummaryCard(
+                        title: 'Flagged',
+                        value: attendance
+                            .flagged
+                            .toString(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _SummaryCard(
+                        title: 'Rejected',
+                        value: attendance
+                            .rejected
+                            .toString(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller:
+                      _searchController,
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Search Attendance ID or Student ID',
+                    prefixIcon:
+                        Icon(Icons.search),
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery =
+                          value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<
+                    String>(
+                  value:
+                      _selectedFilter,
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Status Filter',
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'ALL',
+                      child: Text(
+                        'ALL',
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value:
+                          'CONFIRMED',
+                      child: Text(
+                        'CONFIRMED',
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value:
+                          'FLAGGED',
+                      child: Text(
+                        'FLAGGED',
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value:
+                          'REJECTED',
+                      child: Text(
+                        'REJECTED',
+                      ),
+                    ),
+                  ],
+                  onChanged: (
+                    value,
+                  ) {
+                    if (value == null) {
+                      return;
+                    }
+
+                    setState(() {
+                      _selectedFilter =
+                          value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Attendance Records',
+                  style:
+                      Theme.of(context)
+                          .textTheme
+                          .titleLarge,
+                ),
+                const SizedBox(height: 12),
+                if (filteredRecords
+                    .isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding:
+                          EdgeInsets.all(
+                        16,
+                      ),
+                      child: Text(
+                        'No attendance records found',
+                      ),
+                    ),
+                  ),
+                ...filteredRecords.map(
+                  (
+                    SessionAttendanceRecord
+                        record,
+                  ) {
+                    return Card(
+                      margin:
+                          const EdgeInsets.only(
+                        bottom: 8,
+                      ),
+                      child: ListTile(
+                        title: Text(
+                          'Attendance ID: ${record.attendanceId}',
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment:
+                              CrossAxisAlignment
+                                  .start,
+                          children: [
+                            Text(
+                              'Student ID: ${record.studentId}',
+                            ),
+                            Text(
+                              'Status: ${record.status}',
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  AttendanceDetailScreen(
+                                attendanceId:
+                                    record
+                                        .attendanceId,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _SummaryCard({
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 8,
+        ),
+        child: Column(
+          children: [
+            Text(
+              title,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style:
+                  Theme.of(context)
+                      .textTheme
+                      .headlineSmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/session_monitor_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/start_session_dialog.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/start_session_dialog.dart
+
+import 'package:flutter/material.dart';
+
+import '../../../core/config/app_bootstrap.dart';
+import '../data/faculty_api_service.dart';
+import '../models/classroom.dart';
+
+class StartSessionDialog extends StatefulWidget {
+  final int courseId;
+
+  const StartSessionDialog({
+    super.key,
+    required this.courseId,
+  });
+
+  @override
+  State<StartSessionDialog> createState() =>
+      _StartSessionDialogState();
+}
+
+class _StartSessionDialogState
+    extends State<StartSessionDialog> {
+  late final FacultyApiService _apiService;
+
+  bool _isLoading = true;
+  bool _isSubmitting = false;
+
+  String? _error;
+
+  List<Classroom> _classrooms = [];
+
+  Classroom? _selectedClassroom;
+
+  int _selectedDuration = 15;
+
+  static const List<int> _durations = [
+    5,
+    10,
+    15,
+    20,
+    30,
+    60,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _apiService = FacultyApiService(
+      AppBootstrap.apiClient,
+    );
+
+    _loadClassrooms();
+  }
+
+  Future<void> _loadClassrooms() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final classrooms =
+          await _apiService.getClassrooms();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _classrooms = classrooms;
+
+        if (classrooms.isNotEmpty) {
+          _selectedClassroom =
+              classrooms.first;
+        }
+
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error =
+            'Unable to load classrooms';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _startSession() async {
+    if (_selectedClassroom == null) {
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      await _apiService.startSession(
+        courseId: widget.courseId,
+        classroomId:
+            _selectedClassroom!.id,
+        durationMinutes:
+            _selectedDuration,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).pop(true);
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Failed to start session',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'Start Session',
+      ),
+      content: SizedBox(
+        width: 400,
+        child: Builder(
+          builder: (context) {
+            if (_isLoading) {
+              return const SizedBox(
+                height: 120,
+                child: Center(
+                  child:
+                      CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            if (_error != null) {
+              return SizedBox(
+                height: 150,
+                child: Column(
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
+                  children: [
+                    Text(_error!),
+                    const SizedBox(
+                      height: 12,
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          _loadClassrooms,
+                      child: const Text(
+                        'Retry',
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (_classrooms.isEmpty) {
+              return const SizedBox(
+                height: 120,
+                child: Center(
+                  child: Text(
+                    'No classrooms available',
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              mainAxisSize:
+                  MainAxisSize.min,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Classroom',
+                ),
+                const SizedBox(
+                  height: 8,
+                ),
+                DropdownButtonFormField<
+                    Classroom>(
+                  value:
+                      _selectedClassroom,
+                  items:
+                      _classrooms.map(
+                    (classroom) {
+                      return DropdownMenuItem<
+                          Classroom>(
+                        value: classroom,
+                        child: Text(
+                          classroom.name,
+                        ),
+                      );
+                    },
+                  ).toList(),
+                  onChanged: (
+                    classroom,
+                  ) {
+                    setState(() {
+                      _selectedClassroom =
+                          classroom;
+                    });
+                  },
+                ),
+                const SizedBox(
+                  height: 16,
+                ),
+                const Text(
+                  'Duration (minutes)',
+                ),
+                const SizedBox(
+                  height: 8,
+                ),
+                DropdownButtonFormField<int>(
+                  value:
+                      _selectedDuration,
+                  items:
+                      _durations.map(
+                    (duration) {
+                      return DropdownMenuItem<
+                          int>(
+                        value: duration,
+                        child: Text(
+                          '$duration minutes',
+                        ),
+                      );
+                    },
+                  ).toList(),
+                  onChanged: (
+                    duration,
+                  ) {
+                    if (duration == null) {
+                      return;
+                    }
+
+                    setState(() {
+                      _selectedDuration =
+                          duration;
+                    });
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed:
+              _isSubmitting
+                  ? null
+                  : () {
+                      Navigator.of(
+                        context,
+                      ).pop(false);
+                    },
+          child: const Text(
+            'Cancel',
+          ),
+        ),
+        ElevatedButton(
+          onPressed:
+              _isSubmitting
+                  ? null
+                  : _startSession,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child:
+                      CircularProgressIndicator(
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text(
+                  'Start Session',
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/start_session_dialog.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/student_history_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/student_history_screen.dart
+
+import 'package:flutter/material.dart';
+
+import '../../../core/config/app_bootstrap.dart';
+import '../data/course_api_service.dart';
+import '../models/student_history.dart';
+
+class StudentHistoryScreen extends StatefulWidget {
+  final int studentId;
+  final String studentName;
+
+  const StudentHistoryScreen({
+    super.key,
+    required this.studentId,
+    required this.studentName,
+  });
+
+  @override
+  State<StudentHistoryScreen> createState() =>
+      _StudentHistoryScreenState();
+}
+
+class _StudentHistoryScreenState
+    extends State<StudentHistoryScreen> {
+  late final CourseApiService _apiService;
+
+  bool _isLoading = true;
+  String? _error;
+
+  List<StudentHistory> _history = [];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _apiService = CourseApiService(
+      AppBootstrap.apiClient,
+    );
+
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final history =
+          await _apiService.getStudentHistory(
+        widget.studentId,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _history = history;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error =
+            'Unable to load student history';
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatTimestamp(
+    DateTime timestamp,
+  ) {
+    return timestamp
+        .toLocal()
+        .toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.studentName,
+        ),
+      ),
+      body: Builder(
+        builder: (context) {
+          if (_isLoading) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          if (_error != null) {
+            return Center(
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize.min,
+                children: [
+                  Text(_error!),
+                  const SizedBox(
+                    height: 12,
+                  ),
+                  ElevatedButton(
+                    onPressed:
+                        _loadHistory,
+                    child: const Text(
+                      'Retry',
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (_history.isEmpty) {
+            return const Center(
+              child: Text(
+                'No attendance history found',
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: _loadHistory,
+            child: ListView.separated(
+              physics:
+                  const AlwaysScrollableScrollPhysics(),
+              padding:
+                  const EdgeInsets.all(
+                12,
+              ),
+              itemCount:
+                  _history.length,
+              separatorBuilder:
+                  (_, __) =>
+                      const SizedBox(
+                height: 8,
+              ),
+              itemBuilder:
+                  (context, index) {
+                final item =
+                    _history[index];
+
+                return Card(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      12,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          'Attendance ID: ${item.attendanceId}',
+                          style:
+                              const TextStyle(
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 8,
+                        ),
+                        Text(
+                          'Course Name: ${item.courseName}',
+                        ),
+                        const SizedBox(
+                          height: 4,
+                        ),
+                        Text(
+                          'Status: ${item.status}',
+                        ),
+                        const SizedBox(
+                          height: 4,
+                        ),
+                        Text(
+                          'Timestamp: ${_formatTimestamp(item.timestamp)}',
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/student_history_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/providers/course_provider.dart
+
+import 'package:flutter/foundation.dart';
+
+import '../data/course_api_service.dart';
+import '../models/course_detail.dart';
+import '../models/course_student.dart';
+import '../models/faculty_course.dart';
+import '../models/student_history.dart';
+
+class CourseProvider extends ChangeNotifier {
+  final CourseApiService _apiService;
+
+  CourseProvider(this._apiService);
+
+  bool isLoading = false;
+
+  List<FacultyCourse> courses = [];
+
+  CourseDetail? courseDetail;
+
+  List<CourseStudent> courseStudents = [];
+
+  List<StudentHistory> studentHistory = [];
+
+  Future<void> loadCourses() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      courses = await _apiService.getCourses();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadCourseDetail(
+    int courseId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      courseDetail =
+          await _apiService.getCourseDetail(
+        courseId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadCourseStudents(
+    int courseId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      courseStudents =
+          await _apiService.getCourseStudents(
+        courseId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadStudentHistory(
+    int studentId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      studentHistory =
+          await _apiService.getStudentHistory(
+        studentId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void clearCourseDetail() {
+    courseDetail = null;
+    courseStudents = [];
+    notifyListeners();
+  }
+
+  void clearStudentHistory() {
+    studentHistory = [];
+    notifyListeners();
+  }
+
+  void clearAll() {
+    courses = [];
+    courseDetail = null;
+    courseStudents = [];
+    studentHistory = [];
+    notifyListeners();
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/providers/faculty_provider.dart
+
+import 'package:flutter/foundation.dart';
+
+import '../data/faculty_repository.dart';
+import '../models/attendance_detail.dart';
+import '../models/attendance_evidence.dart';
+import '../models/faculty_dashboard.dart';
+import '../models/faculty_session.dart';
+import '../models/flagged_attendance.dart';
+import '../models/session_attendance.dart';
+
+class FacultyProvider extends ChangeNotifier {
+  final FacultyRepository _repository;
+
+  FacultyProvider(this._repository);
+
+  bool isLoading = false;
+
+  FacultyDashboard? dashboard;
+
+  List<FacultySession> sessions = [];
+
+  List<FlaggedAttendance> flaggedAttendance = [];
+
+  AttendanceDetail? attendanceDetail;
+
+  AttendanceEvidence? attendanceEvidence;
+
+  SessionAttendance? sessionAttendance;
+
+  Future<void> loadDashboard() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data =
+          await _repository.getDashboard();
+
+      dashboard = FacultyDashboard.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadSessions() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data =
+          await _repository.getSessions();
+
+      sessions = data
+          .map(
+            (item) =>
+                FacultySession.fromJson(item),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadFlaggedAttendance({
+    required int classroomId,
+  }) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getFlaggedAttendance(
+        classroomId: classroomId,
+      );
+
+      flaggedAttendance = data
+          .map(
+            (item) =>
+                FlaggedAttendance.fromJson(
+              item,
+            ),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadAttendanceDetail(
+    int attendanceId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getAttendanceDetail(
+        attendanceId,
+      );
+
+      attendanceDetail =
+          AttendanceDetail.fromJson(data);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadAttendanceEvidence(
+    int attendanceId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getAttendanceEvidence(
+        attendanceId,
+      );
+
+      attendanceEvidence =
+          AttendanceEvidence.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resolveAttendance({
+    required int attendanceId,
+    required String status,
+    required String reason,
+  }) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.resolveAttendance(
+        attendanceId: attendanceId,
+        status: status,
+        reason: reason,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> closeSession(
+    int sessionId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.closeSession(
+        sessionId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadSessionAttendance(
+    int sessionId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getSessionAttendance(
+        sessionId,
+      );
+
+      sessionAttendance =
+          SessionAttendance.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
+################################################################################
+

@@ -1,5 +1,7 @@
 // mobile_app/lib/features/faculty/presentation/session_monitor_screen.dart
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -32,6 +34,8 @@ class _SessionMonitorScreenState
 
   String _selectedFilter = 'ALL';
 
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
@@ -45,10 +49,22 @@ class _SessionMonitorScreenState
             );
       },
     );
+
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) {
+        ref
+            .read(facultyProvider)
+            .loadSessionAttendance(
+              widget.sessionId,
+            );
+      },
+    );
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
