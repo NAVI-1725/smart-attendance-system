@@ -1,4 +1,3 @@
-# backend\app\models\faculty_course.py
 # backend/app/models/faculty_course.py
 
 from sqlalchemy import (

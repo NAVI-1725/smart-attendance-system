@@ -79,3 +79,36 @@ class FacultyDashboardResponse(BaseModel):
     flagged_attendance: int
     confirmed_today: int
     rejected_today: int
+
+
+class FacultyCourseItem(BaseModel):
+    course_id: int
+    course_code: str
+    course_name: str
+    student_count: int
+    active_session: bool
+
+
+class FacultyCourseDetail(BaseModel):
+    course_id: int
+
+    course_code: str
+    course_name: str
+
+    student_count: int
+
+    active_session: bool
+    active_session_id: int | None
+
+
+class CourseStudentItem(BaseModel):
+    student_id: int
+    student_name: str
+    attendance_percentage: float
+
+
+class StudentHistoryItem(BaseModel):
+    attendance_id: int
+    course_name: str
+    status: str
+    timestamp: datetime

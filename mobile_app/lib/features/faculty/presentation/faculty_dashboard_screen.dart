@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../presentation/faculty_provider.dart';
+import 'faculty_courses_screen.dart';
 import 'faculty_sessions_screen.dart';
 import 'flagged_attendance_screen.dart';
 
@@ -79,6 +80,20 @@ class _FacultyDashboardScreenState
               padding:
                   const EdgeInsets.all(16),
               children: [
+                _DashboardCard(
+                  title: 'My Courses',
+                  value: 'View',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const FacultyCoursesScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
                 _DashboardCard(
                   title: 'Active Sessions',
                   value: dashboard

@@ -1,10 +1,10 @@
 FOLDER STRUCTURE
 ============================================================
 
-└── backend
-    └── app
-        ├── core
-            └── constants
-                └── security_constants.py
-        └── models
-            └── attendance_ble_evidence.py
+└── mobile_app
+    └── lib
+        └── features
+            └── faculty
+                └── presentation
+                    ├── session_monitor_screen.dart
+                    └── start_session_dialog.dart

@@ -24,6 +24,14 @@ class SessionMonitorScreen
 
 class _SessionMonitorScreenState
     extends ConsumerState<SessionMonitorScreen> {
+  final TextEditingController
+      _searchController =
+      TextEditingController();
+
+  String _searchQuery = '';
+
+  String _selectedFilter = 'ALL';
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +45,12 @@ class _SessionMonitorScreenState
             );
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -77,6 +91,42 @@ class _SessionMonitorScreenState
               ),
             );
           }
+
+          final filteredRecords =
+              attendance.records.where(
+            (
+              SessionAttendanceRecord
+                  record,
+            ) {
+              final query =
+                  _searchQuery
+                      .trim()
+                      .toLowerCase();
+
+              final matchesSearch =
+                  query.isEmpty ||
+                      record.attendanceId
+                          .toString()
+                          .contains(
+                            query,
+                          ) ||
+                      record.studentId
+                          .toString()
+                          .contains(
+                            query,
+                          );
+
+              final matchesFilter =
+                  _selectedFilter ==
+                          'ALL' ||
+                      record.status
+                              .toUpperCase() ==
+                          _selectedFilter;
+
+              return matchesSearch &&
+                  matchesFilter;
+            },
+          ).toList();
 
           return RefreshIndicator(
             onRefresh: () async {
@@ -120,6 +170,80 @@ class _SessionMonitorScreenState
                   ],
                 ),
                 const SizedBox(height: 24),
+                TextField(
+                  controller:
+                      _searchController,
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Search Attendance ID or Student ID',
+                    prefixIcon:
+                        Icon(Icons.search),
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery =
+                          value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<
+                    String>(
+                  value:
+                      _selectedFilter,
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Status Filter',
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'ALL',
+                      child: Text(
+                        'ALL',
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value:
+                          'CONFIRMED',
+                      child: Text(
+                        'CONFIRMED',
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value:
+                          'FLAGGED',
+                      child: Text(
+                        'FLAGGED',
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value:
+                          'REJECTED',
+                      child: Text(
+                        'REJECTED',
+                      ),
+                    ),
+                  ],
+                  onChanged: (
+                    value,
+                  ) {
+                    if (value == null) {
+                      return;
+                    }
+
+                    setState(() {
+                      _selectedFilter =
+                          value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
                 Text(
                   'Attendance Records',
                   style:
@@ -128,17 +252,20 @@ class _SessionMonitorScreenState
                           .titleLarge,
                 ),
                 const SizedBox(height: 12),
-                if (attendance.records.isEmpty)
+                if (filteredRecords
+                    .isEmpty)
                   const Card(
                     child: Padding(
                       padding:
-                          EdgeInsets.all(16),
+                          EdgeInsets.all(
+                        16,
+                      ),
                       child: Text(
                         'No attendance records found',
                       ),
                     ),
                   ),
-                ...attendance.records.map(
+                ...filteredRecords.map(
                   (
                     SessionAttendanceRecord
                         record,

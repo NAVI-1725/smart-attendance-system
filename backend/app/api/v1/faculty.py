@@ -17,15 +17,21 @@ from app.models.faculty_action_logs import FacultyActionLog
 from app.models.attendance_session import AttendanceSession
 from app.models.user import User
 from app.models.course import Course
+from app.models.faculty_course import FacultyCourse
+from app.models.enrollment import Enrollment
 from app.schemas.faculty import (
     AttendanceDetailResponse,
     AttendanceEvidenceResponse,
     AttendanceSummaryResponse,
     BleEvidenceResponse,
+    CourseStudentItem,
+    FacultyCourseDetail,
+    FacultyCourseItem,
     FacultyDashboardResponse,
     FacultySessionHistoryItem,
     FlaggedAttendanceItem,
     GpsEvidenceResponse,
+    StudentHistoryItem,
 )
 from app.schemas.faculty_resolution import FacultyResolutionRequest
 
@@ -33,6 +39,220 @@ router = APIRouter(
     tags=["Faculty"],
     dependencies=[Depends(require_faculty)],
 )
+
+
+@router.get(
+    "/courses",
+    response_model=list[FacultyCourseItem],
+)
+def get_faculty_courses(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    courses = (
+        db.query(
+            Course,
+            func.count(Enrollment.id).label(
+                "student_count",
+            ),
+        )
+        .join(
+            FacultyCourse,
+            FacultyCourse.course_id == Course.id,
+        )
+        .outerjoin(
+            Enrollment,
+            Enrollment.course_id == Course.id,
+        )
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+        )
+        .group_by(
+            Course.id,
+        )
+        .all()
+    )
+
+    results = []
+
+    for course, student_count in courses:
+        active_session = (
+            db.query(AttendanceSession)
+            .filter(
+                AttendanceSession.course_id
+                == course.id,
+                AttendanceSession.is_active == True,
+            )
+            .first()
+        )
+
+        results.append(
+            {
+                "course_id": course.id,
+                "course_code": course.course_code,
+                "course_name": course.course_name,
+                "student_count": student_count,
+                "active_session": (
+                    active_session is not None
+                ),
+            }
+        )
+
+    return results
+
+
+@router.get(
+    "/course/{course_id}",
+    response_model=FacultyCourseDetail,
+)
+def get_course_detail(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    course_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    )
+
+    if not course_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    course = (
+        db.query(Course)
+        .filter(
+            Course.id == course_id,
+        )
+        .first()
+    )
+
+    student_count = (
+        db.query(func.count(Enrollment.id))
+        .filter(
+            Enrollment.course_id == course_id,
+        )
+        .scalar()
+    )
+
+    active_session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.course_id == course_id,
+            AttendanceSession.is_active == True,
+        )
+        .first()
+    )
+
+    return {
+        "course_id": course.id,
+        "course_code": course.course_code,
+        "course_name": course.course_name,
+        "student_count": student_count,
+        "active_session": (
+            active_session is not None
+        ),
+        "active_session_id": (
+            active_session.id
+            if active_session
+            else None
+        ),
+    }
+
+
+@router.get(
+    "/course/{course_id}/students",
+    response_model=list[CourseStudentItem],
+)
+def get_course_students(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    course_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    )
+
+    if not course_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    total_sessions = (
+        db.query(func.count(AttendanceSession.id))
+        .filter(
+            AttendanceSession.course_id == course_id,
+        )
+        .scalar()
+    )
+
+    students = (
+        db.query(
+            User.id,
+            User.full_name,
+        )
+        .join(
+            Enrollment,
+            Enrollment.student_id == User.id,
+        )
+        .filter(
+            Enrollment.course_id == course_id,
+        )
+        .all()
+    )
+
+    results = []
+
+    for student_id, student_name in students:
+        confirmed_attendances = (
+            db.query(func.count(AttendanceAttempt.id))
+            .join(
+                AttendanceSession,
+                AttendanceAttempt.session_id
+                == AttendanceSession.id,
+            )
+            .filter(
+                AttendanceSession.course_id == course_id,
+                AttendanceAttempt.student_id
+                == student_id,
+                AttendanceAttempt.status
+                == AttendanceStatus.CONFIRMED,
+            )
+            .scalar()
+        )
+
+        attendance_percentage = 0.0
+
+        if total_sessions and total_sessions > 0:
+            attendance_percentage = (
+                confirmed_attendances
+                / total_sessions
+            ) * 100
+
+        results.append(
+            {
+                "student_id": student_id,
+                "student_name": student_name,
+                "attendance_percentage": round(
+                    attendance_percentage,
+                    2,
+                ),
+            }
+        )
+
+    return results
 
 
 @router.post("/attendance/resolve")
@@ -452,28 +672,66 @@ def get_flagged_attendance(
     ]
 
 
-@router.get("/student-history")
+@router.get(
+    "/student/{student_id}/history",
+    response_model=list[StudentHistoryItem],
+)
 def get_student_history(
     student_id: int,
-    classroom_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
 
-    ensure_faculty_owns_classroom(
-        db,
-        current_user.id,
-        classroom_id,
-    )
-
-    history = (
-        db.query(AttendanceAttempt)
-        .filter(
-            AttendanceAttempt.student_id == student_id,
-            AttendanceAttempt.classroom_id == classroom_id,
+    history_records = (
+        db.query(
+            AttendanceAttempt,
+            Course.course_name,
         )
-        .order_by(AttendanceAttempt.id.desc())
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .join(
+            Course,
+            AttendanceSession.course_id
+            == Course.id,
+        )
+        .join(
+            FacultyCourse,
+            FacultyCourse.course_id
+            == Course.id,
+        )
+        .filter(
+            AttendanceAttempt.student_id
+            == student_id,
+            FacultyCourse.faculty_id
+            == current_user.id,
+        )
+        .order_by(
+            AttendanceAttempt.id.desc(),
+        )
         .all()
     )
 
-    return history
+    if not history_records:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student history not found",
+        )
+
+    return [
+        {
+            "attendance_id": attendance.id,
+            "course_name": course_name,
+            "status": attendance.status.value,
+            "timestamp": (
+                attendance.reviewed_at
+                or attendance.created_at
+            ),
+        }
+        for (
+            attendance,
+            course_name,
+        ) in history_records
+    ]

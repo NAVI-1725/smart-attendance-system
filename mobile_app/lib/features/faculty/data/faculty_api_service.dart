@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/services/api_client.dart';
+import '../models/classroom.dart';
 
 class FacultyApiService {
   final ApiClient _apiClient;
@@ -17,6 +18,23 @@ class FacultyApiService {
     return Map<String, dynamic>.from(
       response.data as Map,
     );
+  }
+
+  Future<List<Classroom>> getClassrooms() async {
+    final Response response = await _apiClient.dio.get(
+      '/classrooms',
+    );
+
+    final List<dynamic> data =
+        response.data as List<dynamic>;
+
+    return data
+        .map(
+          (item) => Classroom.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
+        .toList();
   }
 
   Future<List<Map<String, dynamic>>> getFlaggedAttendance({
@@ -99,6 +117,21 @@ class FacultyApiService {
           ),
         )
         .toList();
+  }
+
+  Future<void> startSession({
+    required int courseId,
+    required int classroomId,
+    required int durationMinutes,
+  }) async {
+    await _apiClient.dio.post(
+      '/sessions/start',
+      data: {
+        'course_id': courseId,
+        'classroom_id': classroomId,
+        'duration_minutes': durationMinutes,
+      },
+    );
   }
 
   Future<void> closeSession(

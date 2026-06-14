@@ -51,6 +51,18 @@ class FacultyRepository {
     return _apiService.getSessions();
   }
 
+  Future<void> startSession({
+    required int courseId,
+    required int classroomId,
+    required int durationMinutes,
+  }) {
+    return _apiService.startSession(
+      courseId: courseId,
+      classroomId: classroomId,
+      durationMinutes: durationMinutes,
+    );
+  }
+
   Future<void> closeSession(
     int sessionId,
   ) {

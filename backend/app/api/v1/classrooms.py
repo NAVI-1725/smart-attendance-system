@@ -5,7 +5,10 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import require_faculty
 from app.db.session import get_db
 from app.models.classroom import Classroom
-from app.schemas.classroom import ClassroomCreate
+from app.schemas.classroom import (
+    ClassroomCreate,
+    ClassroomResponse,
+)
 
 router = APIRouter(
     prefix="/classrooms",
@@ -33,3 +36,23 @@ def create_classroom(
         "id": classroom.id,
         "name": classroom.name,
     }
+
+
+@router.get(
+    "",
+    response_model=list[ClassroomResponse],
+)
+def get_classrooms(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_faculty),
+):
+    classrooms = (
+        db.query(Classroom)
+        .filter(
+            Classroom.faculty_id == current_user.id,
+        )
+        .order_by(Classroom.id.asc())
+        .all()
+    )
+
+    return classrooms

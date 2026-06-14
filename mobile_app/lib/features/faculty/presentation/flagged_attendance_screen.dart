@@ -24,9 +24,16 @@ class _FlaggedAttendanceScreenState
       _classroomIdController =
       TextEditingController();
 
+  final TextEditingController
+      _searchController =
+      TextEditingController();
+
+  String _searchQuery = '';
+
   @override
   void dispose() {
     _classroomIdController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -72,6 +79,33 @@ class _FlaggedAttendanceScreenState
                 facultyProvider,
               );
 
+          final filteredAttendance =
+              provider.flaggedAttendance.where(
+            (attendance) {
+              if (_searchQuery
+                  .trim()
+                  .isEmpty) {
+                return true;
+              }
+
+              final query =
+                  _searchQuery
+                      .toLowerCase()
+                      .trim();
+
+              return attendance
+                      .attendanceId
+                      .toString()
+                      .contains(query) ||
+                  attendance.studentName
+                      .toLowerCase()
+                      .contains(query) ||
+                  attendance.courseName
+                      .toLowerCase()
+                      .contains(query);
+            },
+          ).toList();
+
           return Column(
             children: [
               Padding(
@@ -107,6 +141,31 @@ class _FlaggedAttendanceScreenState
                   ],
                 ),
               ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                child: TextField(
+                  controller:
+                      _searchController,
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Search Attendance ID, Student Name, Course Name',
+                    prefixIcon:
+                        Icon(Icons.search),
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
               Expanded(
                 child: provider.isLoading
                     ? const Center(
@@ -114,14 +173,13 @@ class _FlaggedAttendanceScreenState
                             CircularProgressIndicator(),
                       )
                     : ListView.builder(
-                        itemCount: provider
-                            .flaggedAttendance
-                            .length,
+                        itemCount:
+                            filteredAttendance
+                                .length,
                         itemBuilder:
                             (context, index) {
                           final attendance =
-                              provider
-                                      .flaggedAttendance[
+                              filteredAttendance[
                                   index];
 
                           return Card(

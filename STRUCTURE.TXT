@@ -3,6 +3,8 @@
     📁 .git/  → (skipped: irrelevant)
     📄 .gitignore
     📁 .venv/  → (skipped: irrelevant)
+    📁 AI_EXPORT/
+    📄 STRUCTURE.TXT
     📁 analytics/
     📁 backend/
         📄 .env
@@ -10,6 +12,16 @@
         📄 .ruff.toml
         📁 .ruff_cache/
         📁 alembic/
+            📄 README
+            📁 __pycache__/  → (skipped: irrelevant)
+            📄 env.py
+            📄 script.py.mako
+            📁 versions/
+                📄 581304ef2f16_add_attendance_gps_evidence.py
+                📁 __pycache__/  → (skipped: irrelevant)
+                📄 b0c7fdca0493_add_gps_validation_result_enum.py
+                📄 c63cbdde1a3a_phase5_review_metadata.py
+                📄 ffa2c8940924_initial_phase1_schema.py
         📄 alembic.ini
         📁 app/
             📁 __pycache__/  → (skipped: irrelevant)
@@ -35,6 +47,7 @@
                 📁 constants/
                     📄 __init__.py
                     📁 __pycache__/  → (skipped: irrelevant)
+                    📄 gps.py
                     📄 roles.py
                     📄 security_constants.py
                 📄 database.py
@@ -59,15 +72,18 @@
                 📄 attendance.py
                 📄 attendance_ble_evidence.py
                 📄 attendance_ble_nonce.py
+                📄 attendance_gps_evidence.py
                 📄 attendance_session.py
                 📄 auth_session.py
                 📄 beacon_secret.py
                 📄 classroom.py
+                📄 course.py
                 📄 device.py
                 📄 enrollment.py
+                📄 enums.py
                 📄 faculty_action_logs.py
+                📄 faculty_course.py
                 📄 permissions.py
-                📄 session.py
                 📄 trusted_ble_beacon.py
                 📄 user.py
             📁 routers/
@@ -86,37 +102,30 @@
                 📄 trusted_beacon.py
             📁 services/
                 📁 __pycache__/  → (skipped: irrelevant)
+                📄 attendance_evidence_service.py
                 📄 attendance_flagging.py
                 📄 beacon_registry_service.py
                 📄 beacon_signature_service.py
                 📄 ble_security_service.py
                 📄 device_binding_service.py
+                📄 gps_service.py
                 📄 session_cleanup_service.py
+                📄 session_discovery_service.py
             📁 utils/
-        📁 backend/
         📄 pytest.ini
         📄 requirements.txt
+        📁 scripts/
         📁 tests/
-            📁 integration/
-            📁 scenarios/
-            📁 security/
-                📁 __pycache__/  → (skipped: irrelevant)
-                📄 conftest.py
-                📄 test_ble_security.py
-                📄 test_replay_protection.py
-                📄 test_signature_validation.py
-            📁 unit/
         📁 venv/
+    📄 code.py
+    📄 config.json
     📁 cv-audit-module/
-        📁 models/
-        📁 src/
-        📁 tests/
-            📁 sample_images/
     📁 database/
         📁 backups/
         📁 migrations/
         📁 schema/
         📁 seeds/
+    📄 debug.py
     📁 deployment/
         📁 docker/
         📁 kubernetes/
@@ -131,10 +140,15 @@
             📁 test_results/
         📁 user_manuals/
         📁 viva/
+    📄 export_log.txt
     📁 faculty-dashboard/
     📁 iot-beacon/
         📄 .gitignore
         📁 .pio/
+            📁 build/
+                📁 esp32dev/
+                📄 project.checksum
+            📁 libdeps/
         📁 .vscode/  → (skipped: irrelevant)
         📁 include/
             📄 beacon_config.h
@@ -144,25 +158,34 @@
             📄 crypto_utils.cpp
             📄 main.cpp
     📁 mobile_app/
+        📁 .dart_tool/
+            📁 dartpad/
+                📄 web_plugin_registrant.dart
+            📁 flutter_build/
+            📄 package_config.json
+            📄 package_graph.json
+            📄 version
+        📄 .flutter-plugins-dependencies
+        📄 .gitignore
+        📁 .idea/  → (skipped: irrelevant)
+        📄 .metadata
+        📄 README.md
+        📄 analysis_options.yaml
+        📁 android/
+        📁 build/
+        📁 ios/
+        📁 lib/
+        📁 linux/
+        📁 macos/
+        📄 mobile_app.iml
+        📄 pubspec.lock
+        📄 pubspec.yaml
+        📁 test/
+            📄 widget_test.dart
+        📁 web/
+        📁 windows/
+    📄 mobileapp_structure.txt
     📁 scanner/
-        📁 ble_scanner_service/
-            📄 __init__.py
-            📁 __pycache__/  → (skipped: irrelevant)
-            📄 main.py  (→ main application logic)
-            📄 models.py
-            📄 parser.py
-            📄 scanner.py
-            📄 service.py
-            📄 validate_main.py
-            📄 validator.py
-        📄 requirements.txt
     📁 scripts/
-        📁 data/
-        📁 monitoring/
-        📁 setup/
     📄 structure.py
     📁 testing/
-        📁 integration/
-        📁 performance/
-        📁 reports/
-        📁 scenarios/

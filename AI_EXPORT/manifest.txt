@@ -3,6 +3,6 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  backend/app/core/constants/security_constants.py
-  backend/app/models/attendance_ble_evidence.py
+  mobile_app/lib/features/faculty/presentation/session_monitor_screen.dart
+  mobile_app/lib/features/faculty/presentation/start_session_dialog.dart
 
