@@ -1,14 +1,10 @@
 FOLDER STRUCTURE
 ============================================================
 
-└── backend
-    └── app
-        ├── api
-            └── v1
-                └── attendance.py
-        ├── core
-            └── domain_rules.py
-        ├── models
-            └── attendance_session.py
-        └── services
-            └── session_discovery_service.py
+└── mobile_app
+    └── lib
+        └── features
+            └── faculty
+                └── providers
+                    ├── course_provider.dart
+                    └── faculty_provider.dart

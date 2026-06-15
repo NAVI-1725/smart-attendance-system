@@ -71,7 +71,7 @@ def self_unbind_device(
 ):
     if current_user.role == "student":
         raise ApiError(
-            ErrorCode.FORBIDDEN,
+            ErrorCode.NOT_AUTHORIZED,
             "Students cannot reset devices",
             status_code=403,
         )

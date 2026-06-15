@@ -1,928 +1,319 @@
 ################################################################################
-FILE: backend/app/api/v1/attendance.py
+FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
 ################################################################################
 
-# backend/app/api/v1/attendance.py
+// mobile_app/lib/features/faculty/providers/course_provider.dart
 
-from datetime import datetime, timezone
+import 'package:flutter/foundation.dart';
 
-from fastapi import APIRouter, Depends
-import logging
-from sqlalchemy.orm import Session as DBSession
-from sqlalchemy.exc import IntegrityError
+import '../data/course_api_service.dart';
+import '../models/course_detail.dart';
+import '../models/course_student.dart';
+import '../models/faculty_course.dart';
+import '../models/student_history.dart';
 
-from app.db.session import get_db
-from app.core.auth import get_current_user
-from app.core.dependencies import require_faculty
-from app.core.domain_rules import (
-    ensure_student_enrolled_in_course,
-    ensure_faculty_owns_classroom,
-)
-from app.core.errors import ApiError, ErrorCode
-from app.core.constants.roles import UserRole
-from app.models.user import User
-from app.models.attendance_session import AttendanceSession
-from app.models.attendance import AttendanceAttempt
-from app.models.attendance_ble_evidence import AttendanceBleEvidence
-from app.models.attendance_gps_evidence import AttendanceGpsEvidence
-from app.models.attendance_ble_nonce import AttendanceBLENonce
-from app.models.course import Course
-from app.models.enums import (
-    AttendanceStatus,
-    AttendanceSessionStatus,
-    AttendanceEvidenceResult,
-)
-from app.schemas.attendance import (
-    AttendanceAttemptRequest,
-    AttendanceJoinResponse,
-    AttendanceSubmitResponse,
-    CloseAttendanceResponse,
-    AttendanceEvidenceResponse,
-    AttendanceSnapshotResponse,
-    BleEvidenceSnapshotResponse,
-    GpsEvidenceSnapshotResponse,
-    AttendanceHistoryItem,
-)
-from app.services.ble_security_service import (
-    validate_ble_attendance,
-)
-from app.services.gps_service import (
-    validate_location,
-)
-from app.services.attendance_evidence_service import (
-    evaluate_evidence,
-)
-from app.services.session_cleanup_service import (
-    deactivate_expired_sessions,
-)
+class CourseProvider extends ChangeNotifier {
+  final CourseApiService _apiService;
 
-router = APIRouter(tags=["Attendance"])
-logger = logging.getLogger(__name__)
+  CourseProvider(this._apiService);
 
+  bool isLoading = false;
 
-@router.post(
-    "/attempt",
-    response_model=AttendanceSubmitResponse,
-)
-def submit_attendance(
-    data: AttendanceAttemptRequest,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+  List<FacultyCourse> courses = [];
 
-    deactivate_expired_sessions(db)
+  CourseDetail? courseDetail;
 
-    now = datetime.now(timezone.utc)
+  List<CourseStudent> courseStudents = [];
 
-    try:
-        session_id = int(data.session_id)
-    except (TypeError, ValueError):
-        raise ApiError(
-            ErrorCode.INVALID_SESSION,
-            "Invalid attendance session",
-            status_code=400,
-        )
+  List<StudentHistory> studentHistory = [];
 
-    session = (
-        db.query(AttendanceSession)
-        .filter(
-            AttendanceSession.id == session_id,
-        )
-        .with_for_update()
-        .first()
-    )
+  Future<void> loadCourses() async {
+    isLoading = true;
+    notifyListeners();
 
-    if not session:
-        raise ApiError(
-            ErrorCode.INVALID_SESSION,
-            "Attendance session not found",
-            status_code=404,
-        )
-
-    if session.closed_at is not None:
-        raise ApiError(
-            ErrorCode.SESSION_CLOSED,
-            "Attendance session is closed",
-            status_code=403,
-        )
-
-    if session.expires_at <= now:
-        raise ApiError(
-            ErrorCode.SESSION_EXPIRED,
-            "Attendance session expired",
-            status_code=403,
-        )
-
-    if not session.is_active:
-        raise ApiError(
-            ErrorCode.SESSION_CLOSED,
-            "Attendance session inactive",
-            status_code=403,
-        )
-
-    logger.info(
-        "BLE evidence received",
-        extra={"ble": data.ble_evidence},
-    )
-    print("SESSION ID =", session.id)
-    print("CLASSROOM ID =", session.classroom_id)
-    print("BLE PAYLOAD =", data.ble_evidence)
-
-    ble_status = validate_ble_attendance(
-        db=db,
-        session_id=session.id,
-        classroom_id=session.classroom_id,
-        ble=data.ble_evidence,
-    )
-    print("BLE STATUS =", ble_status)
-
-    gps_result, distance_meters, validation_reason = (
-        validate_location(
-            classroom=session.classroom,
-            latitude=data.gps_evidence.latitude,
-            longitude=data.gps_evidence.longitude,
-            accuracy_meters=data.gps_evidence.accuracy_meters,
-            captured_at=data.gps_evidence.captured_at,
-        )
-    )
-
-    evidence_result = evaluate_evidence(
-        ble_result=ble_status,
-        gps_result=gps_result,
-    )
-
-    attendance_status = (
-        AttendanceStatus.CONFIRMED
-        if evidence_result
-        == AttendanceEvidenceResult.CONFIRMED
-        else AttendanceStatus.FLAGGED
-    )
-
-    try:
-
-        attendance = AttendanceAttempt(
-            student_id=current_user.id,
-            classroom_id=session.classroom_id,
-            session_id=session.id,
-            status=attendance_status,
-        )
-
-        db.add(attendance)
-        db.flush()
-
-        for _, beacon in data.ble_evidence.per_beacon.items():
-
-            nonce_record = AttendanceBLENonce(
-                session_id=session.id,
-                nonce=beacon.nonce,
-            )
-
-            db.add(nonce_record)
-
-        if data.ble_evidence is not None:
-
-            ble_row = AttendanceBleEvidence(
-                attendance_id=attendance.id,
-                ble_payload=data.ble_evidence.dict(),
-                client_timestamp=(
-                    data.gps_evidence.captured_at
-                ),
-                server_received_timestamp=(
-                    datetime.now(timezone.utc)
-                ),
-            )
-
-            db.add(ble_row)
-
-        gps_row = AttendanceGpsEvidence(
-            attendance_id=attendance.id,
-            latitude=data.gps_evidence.latitude,
-            longitude=data.gps_evidence.longitude,
-            accuracy_meters=data.gps_evidence.accuracy_meters,
-            captured_at=data.gps_evidence.captured_at,
-            distance_from_classroom_meters=distance_meters,
-            validation_result=gps_result,
-            validation_reason=validation_reason,
-        )
-
-        db.add(gps_row)
-
-        db.commit()
-
-        db.refresh(attendance)
-
-    except IntegrityError as e:
-
-        db.rollback()
-
-        print("INTEGRITY ERROR =", e)
-
-        raise ApiError(
-            ErrorCode.DUPLICATE_ATTENDANCE,
-            "Attendance already recorded",
-            status_code=409,
-        )
-
-    except Exception:
-
-        db.rollback()
-        raise
-
-    response = {
-        "attempt_id": str(attendance.id),
-        "session_id": str(session.id),
-        "student_id": str(current_user.id),
-        "timestamp": datetime.now(
-            timezone.utc,
-        ).isoformat(),
-        "status": attendance.status.value,
-        "is_flagged": (
-            attendance.status
-            == AttendanceStatus.FLAGGED
-        ),
+    try {
+      courses = await _apiService.getCourses();
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
+  }
 
-    print("ATTENDANCE RESPONSE =", response)
+  Future<void> loadCourseDetail(
+    int courseId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
 
-    return response
-
-
-@router.post(
-    "/join",
-    response_model=AttendanceJoinResponse,
-)
-def join_attendance(
-    classroom_id: int,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    if current_user.role != UserRole.STUDENT.value:
-        raise ApiError(
-            ErrorCode.NOT_AUTHORIZED,
-            "Only students may join attendance",
-            status_code=403,
-        )
-
-    deactivate_expired_sessions(db)
-
-    now = datetime.now(timezone.utc)
-
-    faculty_session = (
-        db.query(AttendanceSession)
-        .filter(
-            AttendanceSession.classroom_id == classroom_id,
-            AttendanceSession.is_active == True,
-            AttendanceSession.closed_at.is_(None),
-            AttendanceSession.expires_at > now,
-        )
-        .with_for_update()
-        .first()
-    )
-
-    if not faculty_session:
-        raise ApiError(
-            ErrorCode.CLASS_NOT_ACTIVE,
-            "No active classroom",
-            status_code=404,
-        )
-
-    ensure_student_enrolled_in_course(
-        db,
-        current_user.id,
-        faculty_session.course_id,
-    )
-
-    # Student authentication is already validated via JWT + get_current_user
-
-    existing = (
-        db.query(AttendanceAttempt)
-        .filter(
-            AttendanceAttempt.student_id == current_user.id,
-            AttendanceAttempt.session_id == faculty_session.id,
-        )
-        .first()
-    )
-
-    if existing:
-        raise ApiError(
-            ErrorCode.DUPLICATE_ATTENDANCE,
-            "Attendance already recorded",
-            status_code=409,
-        )
-
-    attendance = AttendanceAttempt(
-        student_id=current_user.id,
-        classroom_id=classroom_id,
-        session_id=faculty_session.id,
-        status=AttendanceStatus.CONFIRMED,
-    )
-
-    db.add(attendance)
-
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-
-        raise ApiError(
-            ErrorCode.DUPLICATE_ATTENDANCE,
-            "Attendance already recorded",
-            status_code=409,
-        )
-
-    return {"status": "present"}
-
-
-@router.get("/classroom/{classroom_id}", dependencies=[Depends(require_faculty)])
-def get_classroom_attendance(
-    classroom_id: int,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    ensure_faculty_owns_classroom(db, current_user.id, classroom_id)
-
-    records = (
-        db.query(AttendanceAttempt, User.full_name, User.email)
-        .join(User, AttendanceAttempt.student_id == User.id)
-        .filter(AttendanceAttempt.classroom_id == classroom_id)
-        .all()
-    )
-
-    return [
-        {
-            "student_name": name,
-            "student_email": email,
-            "status": attendance.status,
-        }
-        for attendance, name, email in records
-    ]
-
-
-@router.get(
-    "/my-history",
-    response_model=list[AttendanceHistoryItem],
-)
-def get_my_attendance_history(
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    records = (
-        db.query(
-            AttendanceAttempt,
-            AttendanceSession,
-            Course,
-        )
-        .join(
-            AttendanceSession,
-            AttendanceAttempt.session_id
-            == AttendanceSession.id,
-        )
-        .join(
-            Course,
-            AttendanceSession.course_id
-            == Course.id,
-        )
-        .filter(
-            AttendanceAttempt.student_id
-            == current_user.id,
-        )
-        .order_by(
-            AttendanceAttempt.id.desc(),
-        )
-        .all()
-    )
-
-    return [
-        AttendanceHistoryItem(
-            course_code=course.course_code,
-            course_name=course.course_name,
-            status=attendance.status.value,
-            timestamp=session.started_at,
-        )
-        for attendance, session, course in records
-    ]
-
-
-@router.post(
-    "/close/{classroom_id}",
-    response_model=CloseAttendanceResponse,
-    dependencies=[Depends(require_faculty)],
-)
-def close_attendance(
-    classroom_id: int,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-
-    ensure_faculty_owns_classroom(db, current_user.id, classroom_id)
-
-    deactivate_expired_sessions(db)
-
-    now = datetime.now(timezone.utc)
-
-    faculty_session = (
-        db.query(AttendanceSession)
-        .filter(
-            AttendanceSession.classroom_id == classroom_id,
-            AttendanceSession.is_active == True,
-            AttendanceSession.closed_at.is_(None),
-            AttendanceSession.expires_at > now,
-        )
-        .with_for_update()
-        .first()
-    )
-
-    if not faculty_session:
-        raise ApiError(
-            ErrorCode.CLASS_NOT_ACTIVE,
-            "No active classroom",
-            status_code=404,
-        )
-
-    faculty_session.is_active = False
-    faculty_session.closed_at = datetime.now(timezone.utc)
-    faculty_session.status = AttendanceSessionStatus.CLOSED
-
-    db.commit()
-
-    return {
-        "status": "closed",
-        "classroom_id": classroom_id,
-        "session_id": faculty_session.id,
-        "closed_at": faculty_session.closed_at,
+    try {
+      courseDetail =
+          await _apiService.getCourseDetail(
+        courseId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
     }
+  }
 
+  Future<void> loadCourseStudents(
+    int courseId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
 
-@router.get(
-    "/{attendance_id}/evidence",
-    response_model=AttendanceEvidenceResponse,
-    dependencies=[Depends(require_faculty)],
-)
-def get_attendance_evidence(
-    attendance_id: int,
-    db: DBSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+    try {
+      courseStudents =
+          await _apiService.getCourseStudents(
+        courseId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-    attendance = (
-        db.query(AttendanceAttempt)
-        .filter(
-            AttendanceAttempt.id == attendance_id,
-        )
-        .first()
-    )
+  Future<void> loadStudentHistory(
+    int studentId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
 
-    if not attendance:
-        raise ApiError(
-            ErrorCode.NOT_FOUND,
-            "Attendance record not found",
-            status_code=404,
-        )
+    try {
+      studentHistory =
+          await _apiService.getStudentHistory(
+        studentId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-    ensure_faculty_owns_classroom(
-        db,
-        current_user.id,
-        attendance.classroom_id,
-    )
+  void clearCourseDetail() {
+    courseDetail = null;
+    courseStudents = [];
+    notifyListeners();
+  }
 
-    ble_evidence = (
-        db.query(AttendanceBleEvidence)
-        .filter(
-            AttendanceBleEvidence.attendance_id
-            == attendance.id
-        )
-        .first()
-    )
+  void clearStudentHistory() {
+    studentHistory = [];
+    notifyListeners();
+  }
 
-    gps_evidence = (
-        db.query(AttendanceGpsEvidence)
-        .filter(
-            AttendanceGpsEvidence.attendance_id
-            == attendance.id
-        )
-        .first()
-    )
-
-    return AttendanceEvidenceResponse(
-        attendance=AttendanceSnapshotResponse(
-            id=attendance.id,
-            student_id=attendance.student_id,
-            classroom_id=attendance.classroom_id,
-            session_id=attendance.session_id,
-            status=attendance.status.value,
-        ),
-        ble_evidence=(
-            BleEvidenceSnapshotResponse(
-                attendance_id=ble_evidence.attendance_id,
-                ble_payload=ble_evidence.ble_payload,
-                created_at=ble_evidence.created_at,
-            )
-            if ble_evidence
-            else None
-        ),
-        gps_evidence=(
-            GpsEvidenceSnapshotResponse(
-                attendance_id=gps_evidence.attendance_id,
-                latitude=gps_evidence.latitude,
-                longitude=gps_evidence.longitude,
-                accuracy_meters=gps_evidence.accuracy_meters,
-                captured_at=gps_evidence.captured_at,
-                distance_from_classroom_meters=(
-                    gps_evidence.distance_from_classroom_meters
-                ),
-                validation_result=(
-                    gps_evidence.validation_result.value
-                    if gps_evidence.validation_result
-                    else None
-                ),
-                validation_reason=gps_evidence.validation_reason,
-                created_at=gps_evidence.created_at,
-            )
-            if gps_evidence
-            else None
-        ),
-    )
+  void clearAll() {
+    courses = [];
+    courseDetail = null;
+    courseStudents = [];
+    studentHistory = [];
+    notifyListeners();
+  }
+}
 
 ################################################################################
-END FILE: backend/app/api/v1/attendance.py
+END FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
 ################################################################################
 
 ################################################################################
-FILE: backend/app/core/domain_rules.py
+FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
 ################################################################################
 
-################################################################################
-# FILE: backend/app/core/domain_rules.py
-################################################################################
+// mobile_app/lib/features/faculty/providers/faculty_provider.dart
 
-from datetime import datetime, timezone
+import 'package:flutter/foundation.dart';
 
-from sqlalchemy.orm import Session
+import '../data/faculty_repository.dart';
+import '../models/attendance_detail.dart';
+import '../models/attendance_evidence.dart';
+import '../models/faculty_dashboard.dart';
+import '../models/faculty_session.dart';
+import '../models/flagged_attendance.dart';
+import '../models/session_attendance.dart';
 
-from app.models.enrollment import Enrollment
-from app.models.attendance import AttendanceAttempt
-from app.models.attendance_session import AttendanceSession
-from app.models.classroom import Classroom
-from app.models.faculty_course import FacultyCourse
-from app.core.errors import ApiError, ErrorCode
-from app.services.session_cleanup_service import deactivate_expired_sessions
+class FacultyProvider extends ChangeNotifier {
+  final FacultyRepository _repository;
 
+  FacultyProvider(this._repository);
 
-def ensure_student_enrolled_in_course(
-    db: Session,
-    student_id: int,
-    course_id: int,
-):
-    if (
-        not db.query(Enrollment)
-        .filter(
-            Enrollment.student_id == student_id,
-            Enrollment.course_id == course_id,
-        )
-        .first()
-    ):
-        raise ApiError(
-            ErrorCode.NOT_ENROLLED,
-            "Student not enrolled",
-            status_code=403,
-        )
+  bool isLoading = false;
 
+  FacultyDashboard? dashboard;
 
-def ensure_class_active(db: Session, classroom_id: int):
-    deactivate_expired_sessions(db)
+  List<FacultySession> sessions = [];
 
-    now = datetime.now(timezone.utc)
+  List<FlaggedAttendance> flaggedAttendance = [];
 
-    session = (
-        db.query(AttendanceSession)
-        .filter(
-            AttendanceSession.classroom_id == classroom_id,
-            AttendanceSession.is_active == True,
-            AttendanceSession.closed_at.is_(None),
-            AttendanceSession.expires_at > now,
-        )
-        .first()
-    )
+  AttendanceDetail? attendanceDetail;
 
-    if not session:
-        raise ApiError(
-            ErrorCode.CLASS_NOT_ACTIVE,
-            "No active classroom",
-            status_code=404,
-        )
+  AttendanceEvidence? attendanceEvidence;
 
-    return session
+  SessionAttendance? sessionAttendance;
 
+  Future<void> loadDashboard() async {
+    isLoading = true;
+    notifyListeners();
 
-def ensure_faculty_owns_classroom(
-    db: Session,
-    faculty_id: int,
-    classroom_id: int,
-):
-    if (
-        not db.query(Classroom)
-        .filter(
-            Classroom.id == classroom_id,
-            Classroom.faculty_id == faculty_id,
-        )
-        .first()
-    ):
-        raise ApiError(
-            ErrorCode.CLASSROOM_NOT_FOUND,
-            "Classroom not found",
-            status_code=404,
-        )
+    try {
+      final data =
+          await _repository.getDashboard();
 
+      dashboard = FacultyDashboard.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-def ensure_faculty_teaches_course(
-    db: Session,
-    faculty_id: int,
-    course_id: int,
-):
-    if (
-        not db.query(FacultyCourse)
-        .filter(
-            FacultyCourse.faculty_id == faculty_id,
-            FacultyCourse.course_id == course_id,
-        )
-        .first()
-    ):
-        raise ApiError(
-            ErrorCode.NOT_AUTHORIZED,
-            "Faculty not assigned to course",
-            status_code=403,
-        )
+  Future<void> loadSessions() async {
+    isLoading = true;
+    notifyListeners();
 
+    try {
+      final data =
+          await _repository.getSessions();
 
-def ensure_faculty_owns_session(
-    db: Session,
-    faculty_id: int,
-    session_id: int,
-):
-    session = (
-        db.query(AttendanceSession)
-        .filter(
-            AttendanceSession.id == session_id,
-        )
-        .first()
-    )
+      sessions = data
+          .map(
+            (item) =>
+                FacultySession.fromJson(item),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-    if not session:
-        raise ApiError(
-            ErrorCode.SESSION_MISSING,
-            "Session not found",
-            status_code=404,
-        )
+  Future<void> loadFlaggedAttendance({
+    required int classroomId,
+  }) async {
+    isLoading = true;
+    notifyListeners();
 
-    if session.faculty_id != faculty_id:
-        raise ApiError(
-            ErrorCode.NOT_AUTHORIZED,
-            "Faculty does not own session",
-            status_code=403,
-        )
+    try {
+      final data = await _repository
+          .getFlaggedAttendance(
+        classroomId: classroomId,
+      );
 
-    return session
+      flaggedAttendance = data
+          .map(
+            (item) =>
+                FlaggedAttendance.fromJson(
+              item,
+            ),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
+  Future<void> loadAttendanceDetail(
+    int attendanceId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
 
-def ensure_faculty_owns_attendance(
-    db: Session,
-    faculty_id: int,
-    attendance_id: int,
-):
-    attendance = (
-        db.query(AttendanceAttempt)
-        .filter(
-            AttendanceAttempt.id == attendance_id,
-        )
-        .first()
-    )
+    try {
+      final data = await _repository
+          .getAttendanceDetail(
+        attendanceId,
+      );
 
-    if not attendance:
-        raise ApiError(
-            ErrorCode.NOT_FOUND,
-            "Attendance not found",
-            status_code=404,
-        )
+      attendanceDetail =
+          AttendanceDetail.fromJson(data);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-    session = (
-        db.query(AttendanceSession)
-        .filter(
-            AttendanceSession.id == attendance.session_id,
-        )
-        .first()
-    )
+  Future<void> loadAttendanceEvidence(
+    int attendanceId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
 
-    if not session or session.faculty_id != faculty_id:
-        raise ApiError(
-            ErrorCode.NOT_AUTHORIZED,
-            "Faculty does not own attendance",
-            status_code=403,
-        )
+    try {
+      final data = await _repository
+          .getAttendanceEvidence(
+        attendanceId,
+      );
 
-    return attendance
+      attendanceEvidence =
+          AttendanceEvidence.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-################################################################################
-END FILE: backend/app/core/domain_rules.py
-################################################################################
+  Future<void> resolveAttendance({
+    required int attendanceId,
+    required String status,
+    required String reason,
+  }) async {
+    isLoading = true;
+    notifyListeners();
 
-################################################################################
-FILE: backend/app/models/attendance_session.py
-################################################################################
+    try {
+      await _repository.resolveAttendance(
+        attendanceId: attendanceId,
+        status: status,
+        reason: reason,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-# backend/app/models/attendance_session.py
+  Future<void> closeSession(
+    int sessionId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
 
-from sqlalchemy import (
-    Column,
-    Integer,
-    Boolean,
-    DateTime,
-    ForeignKey,
-    Index,
-)
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from sqlalchemy.types import Enum as SqlEnum
+    try {
+      await _repository.closeSession(
+        sessionId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-from app.db.base_class import Base
-from app.models.enums import AttendanceSessionStatus
+  Future<void> loadSessionAttendance(
+    int sessionId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
 
+    try {
+      final data = await _repository
+          .getSessionAttendance(
+        sessionId,
+      );
 
-class AttendanceSession(Base):
-    __tablename__ = "attendance_sessions"
-
-    __table_args__ = (
-        Index("ix_attendance_sessions_classroom_id", "classroom_id"),
-        Index("ix_attendance_sessions_faculty_id", "faculty_id"),
-        Index("ix_attendance_sessions_course_id", "course_id"),
-        Index("ix_attendance_sessions_expires_at", "expires_at"),
-        Index("ix_attendance_sessions_is_active", "is_active"),
-    )
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    faculty_id = Column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
-
-    course_id = Column(
-        Integer,
-        ForeignKey("courses.id"),
-        nullable=False,
-    )
-
-    classroom_id = Column(
-        Integer,
-        ForeignKey("classrooms.id"),
-        nullable=False,
-    )
-
-    status = Column(
-        SqlEnum(
-            AttendanceSessionStatus,
-            name="attendance_session_status",
-        ),
-        nullable=False,
-        default=AttendanceSessionStatus.ACTIVE,
-        server_default=AttendanceSessionStatus.ACTIVE.value,
-    )
-
-    is_active = Column(
-        Boolean,
-        default=True,
-        nullable=False,
-    )
-
-    started_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-    )
-
-    expires_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-    )
-
-    duration_minutes = Column(
-        Integer,
-        nullable=False,
-        default=10,
-    )
-
-    closed_at = Column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
-
-    course = relationship(
-        "Course",
-        back_populates="attendance_sessions",
-    )
-
-    faculty = relationship(
-        "User",
-        back_populates="attendance_sessions",
-    )
-
-    classroom = relationship(
-        "Classroom",
-    )
+      sessionAttendance =
+          SessionAttendance.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+}
 
 ################################################################################
-END FILE: backend/app/models/attendance_session.py
-################################################################################
-
-################################################################################
-FILE: backend/app/services/session_discovery_service.py
-################################################################################
-
-# backend/app/services/session_discovery_service.py
-
-from datetime import datetime, timezone
-
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import selectinload
-
-from app.models.attendance_session import AttendanceSession
-from app.models.enrollment import Enrollment
-from app.models.enums import AttendanceSessionStatus
-from app.schemas.session import StudentActiveSessionResponse
-from app.services.session_cleanup_service import (
-    deactivate_expired_sessions,
-)
-
-
-def build_student_session_response(
-    session: AttendanceSession,
-) -> StudentActiveSessionResponse:
-    return StudentActiveSessionResponse(
-        session_id=session.id,
-        course_id=session.course.id,
-        course_code=session.course.course_code,
-        course_name=session.course.course_name,
-        faculty_id=session.faculty.id,
-        faculty_name=session.faculty.full_name,
-        classroom_id=session.classroom.id,
-        classroom_name=session.classroom.name,
-        started_at=session.started_at,
-        expires_at=session.expires_at,
-        status=session.status,
-    )
-
-
-def get_active_sessions_for_student(
-    db: Session,
-    student_id: int,
-) -> list[StudentActiveSessionResponse]:
-
-    deactivate_expired_sessions(db)
-
-    course_ids = [
-        enrollment.course_id
-        for enrollment in (
-            db.query(Enrollment)
-            .filter(
-                Enrollment.student_id == student_id,
-            )
-            .all()
-        )
-    ]
-
-    if not course_ids:
-        return []
-
-    now = datetime.now(timezone.utc)
-
-    sessions = (
-        db.query(AttendanceSession)
-        .options(
-            selectinload(AttendanceSession.course),
-            selectinload(AttendanceSession.faculty),
-            selectinload(AttendanceSession.classroom),
-        )
-        .filter(
-            AttendanceSession.course_id.in_(course_ids),
-            AttendanceSession.status
-            == AttendanceSessionStatus.ACTIVE,
-            AttendanceSession.is_active.is_(True),
-            AttendanceSession.closed_at.is_(None),
-            AttendanceSession.expires_at > now,
-        )
-        .order_by(
-            AttendanceSession.expires_at.asc(),
-        )
-        .all()
-    )
-
-    return [
-        build_student_session_response(session)
-        for session in sessions
-    ]
-
-################################################################################
-END FILE: backend/app/services/session_discovery_service.py
+END FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
 ################################################################################
 

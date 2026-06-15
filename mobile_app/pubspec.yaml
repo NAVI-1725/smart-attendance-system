@@ -34,16 +34,21 @@ dev_dependencies:
 
   # Recommended lints
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
 
-  # Assets section (enable when needed)
-  # assets:
-  #   - images/
+  assets:
+    - assets/icon/
 
   # Fonts section (enable when needed)
   # fonts:
   #   - family: CustomFont
   #     fonts:
   #       - asset: fonts/CustomFont-Regular.ttf
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
