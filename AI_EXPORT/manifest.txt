@@ -3,6 +3,22 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  mobile_app/lib/features/faculty/providers/course_provider.dart
+  backend/app/api/v1/course_registration_sessions.py
+  backend/app/api/v1/faculty.py
+  backend/app/core/dependencies.py
+  backend/app/models/__init__.py
+  backend/app/models/course.py
+  backend/app/models/course_registration_session.py
+  backend/app/models/enrollment.py
+  backend/app/models/enums.py
+  backend/app/models/faculty_action_logs.py
+  backend/app/models/user.py
+  backend/app/schemas/course_registration_session.py
+  mobile_app/lib/features/faculty/data/faculty_api_service.dart
+  mobile_app/lib/features/faculty/data/faculty_repository.dart
+  mobile_app/lib/features/faculty/presentation/course_registration_session_screen.dart
   mobile_app/lib/features/faculty/providers/faculty_provider.dart
+  mobile_app/lib/features/home/registration_sessions_screen.dart
+  mobile_app/lib/features/registration/data/registration_api_service.dart
+  mobile_app/lib/features/registration/models/registration_session.dart
 

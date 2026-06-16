@@ -3,7 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/presentation/auth_provider.dart';
+import '../../auth/presentation/login_screen.dart';
+import '../../profile/presentation/profile_screen.dart';
 import '../presentation/faculty_provider.dart';
+import 'course_registration_session_screen.dart';
 import 'faculty_courses_screen.dart';
 import 'faculty_sessions_screen.dart';
 import 'flagged_attendance_screen.dart';
@@ -39,9 +43,46 @@ class _FacultyDashboardScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.person),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    const ProfileScreen(),
+              ),
+            );
+          },
+        ),
         title: const Text(
           'Faculty Dashboard',
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await ref
+                  .read(
+                    authNotifierProvider.notifier,
+                  )
+                  .logout();
+
+              if (!mounted) {
+                return;
+              }
+
+              Navigator.of(context)
+                  .pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      const LoginScreen(),
+                ),
+                (route) => false,
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer(
         builder: (
@@ -141,6 +182,20 @@ class _FacultyDashboardScreenState
                   value: dashboard
                       .rejectedToday
                       .toString(),
+                ),
+                const SizedBox(height: 12),
+                _DashboardCard(
+                  title: 'Registration Sessions',
+                  value: 'Manage',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const CourseRegistrationSessionScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

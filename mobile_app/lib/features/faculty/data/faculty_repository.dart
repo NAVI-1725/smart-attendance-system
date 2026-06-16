@@ -78,4 +78,8 @@ class FacultyRepository {
       sessionId,
     );
   }
+
+  Future<List<Map<String, dynamic>>> getCourses() {
+    return _apiService.getCourses();
+  }
 }

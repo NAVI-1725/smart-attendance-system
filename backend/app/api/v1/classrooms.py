@@ -1,4 +1,4 @@
-# backend\app\api\v1\classrooms.py
+# backend/app/api/v1/classrooms.py
 
 from fastapi import (
     APIRouter,
@@ -8,7 +8,10 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_faculty
+from app.core.dependencies import (
+    require_faculty,
+    require_admin_or_faculty,
+)
 from app.db.session import get_db
 from app.models.classroom import Classroom
 from app.schemas.classroom import (
@@ -20,7 +23,9 @@ from app.schemas.classroom import (
 router = APIRouter(
     prefix="/classrooms",
     tags=["Classrooms"],
-    dependencies=[Depends(require_faculty)],
+    dependencies=[
+        Depends(require_admin_or_faculty)
+    ],
 )
 
 
@@ -31,7 +36,9 @@ router = APIRouter(
 def create_classroom(
     data: ClassroomCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(require_faculty),
+    current_user=Depends(
+        require_faculty,
+    ),
 ):
     classroom = Classroom(
         name=data.name.strip(),
@@ -54,16 +61,25 @@ def create_classroom(
 )
 def get_classrooms(
     db: Session = Depends(get_db),
-    current_user=Depends(require_faculty),
+    current_user=Depends(
+        require_admin_or_faculty,
+    ),
 ):
-    classrooms = (
-        db.query(Classroom)
-        .filter(
-            Classroom.faculty_id == current_user.id,
+    if current_user.role == "admin":
+        classrooms = (
+            db.query(Classroom)
+            .order_by(Classroom.id.asc())
+            .all()
         )
-        .order_by(Classroom.id.asc())
-        .all()
-    )
+    else:
+        classrooms = (
+            db.query(Classroom)
+            .filter(
+                Classroom.faculty_id == current_user.id,
+            )
+            .order_by(Classroom.id.asc())
+            .all()
+        )
 
     return classrooms
 
@@ -75,16 +91,27 @@ def get_classrooms(
 def get_classroom(
     classroom_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(require_faculty),
+    current_user=Depends(
+        require_admin_or_faculty,
+    ),
 ):
-    classroom = (
-        db.query(Classroom)
-        .filter(
-            Classroom.id == classroom_id,
-            Classroom.faculty_id == current_user.id,
+    if current_user.role == "admin":
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == classroom_id,
+            )
+            .first()
         )
-        .first()
-    )
+    else:
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == classroom_id,
+                Classroom.faculty_id == current_user.id,
+            )
+            .first()
+        )
 
     if not classroom:
         raise HTTPException(
@@ -103,16 +130,27 @@ def update_classroom(
     classroom_id: int,
     data: ClassroomUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(require_faculty),
+    current_user=Depends(
+        require_admin_or_faculty,
+    ),
 ):
-    classroom = (
-        db.query(Classroom)
-        .filter(
-            Classroom.id == classroom_id,
-            Classroom.faculty_id == current_user.id,
+    if current_user.role == "admin":
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == classroom_id,
+            )
+            .first()
         )
-        .first()
-    )
+    else:
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == classroom_id,
+                Classroom.faculty_id == current_user.id,
+            )
+            .first()
+        )
 
     if not classroom:
         raise HTTPException(
@@ -138,16 +176,27 @@ def update_classroom(
 def delete_classroom(
     classroom_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(require_faculty),
+    current_user=Depends(
+        require_admin_or_faculty,
+    ),
 ):
-    classroom = (
-        db.query(Classroom)
-        .filter(
-            Classroom.id == classroom_id,
-            Classroom.faculty_id == current_user.id,
+    if current_user.role == "admin":
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == classroom_id,
+            )
+            .first()
         )
-        .first()
-    )
+    else:
+        classroom = (
+            db.query(Classroom)
+            .filter(
+                Classroom.id == classroom_id,
+                Classroom.faculty_id == current_user.id,
+            )
+            .first()
+        )
 
     if not classroom:
         raise HTTPException(

@@ -153,4 +153,18 @@ class FacultyApiService {
       response.data as Map,
     );
   }
+
+  Future<List<Map<String, dynamic>>> getCourses() async {
+    final Response response = await _apiClient.dio.get(
+      '/faculty/courses',
+    );
+
+    return (response.data as List)
+        .map(
+          (item) => Map<String, dynamic>.from(
+            item as Map,
+          ),
+        )
+        .toList();
+  }
 }

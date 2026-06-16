@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'ble_beacon_payload.dart';
 import 'ble_scan_result.dart';
@@ -24,6 +25,37 @@ class FlutterBleService implements BleService {
 
   BluetoothDevice? _connectedDevice;
 
+  Future<void> _ensurePermissions() async {
+    final statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse,
+    ].request();
+
+    print(
+      'SCAN=${statuses[Permission.bluetoothScan]}',
+    );
+
+    print(
+      'CONNECT=${statuses[Permission.bluetoothConnect]}',
+    );
+
+    print(
+      'LOCATION=${statuses[Permission.locationWhenInUse]}',
+    );
+
+    if (statuses[Permission.bluetoothScan] !=
+            PermissionStatus.granted ||
+        statuses[Permission.bluetoothConnect] !=
+            PermissionStatus.granted ||
+        statuses[Permission.locationWhenInUse] !=
+            PermissionStatus.granted) {
+      throw Exception(
+        'Bluetooth permission denied',
+      );
+    }
+  }
+
   @override
   Future<BleBeaconPayload> readBeaconPayload() async {
     final state =
@@ -35,6 +67,8 @@ class FlutterBleService implements BleService {
         BluetoothAdapterState.on) {
       throw BluetoothDisabledException();
     }
+
+    await _ensurePermissions();
 
     BluetoothDevice? targetDevice;
 
@@ -181,6 +215,8 @@ class FlutterBleService implements BleService {
         BluetoothAdapterState.on) {
       throw BluetoothDisabledException();
     }
+
+    await _ensurePermissions();
 
     final Map<String, List<_PendingScanSample>>
         pendingSamplesPerDevice = {};

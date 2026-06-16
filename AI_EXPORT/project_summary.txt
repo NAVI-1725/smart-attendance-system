@@ -5,10 +5,10 @@ Project Root:
   C:/Users/kumar/smart-attendance-system
 
 Export Date:
-  2026-06-15 16:37:20
+  2026-06-17 01:32:50
 
-Files Exported:               2
-Total Lines:                299
-Total Characters:         5,871
-Estimated Tokens:         1,467
+Files Exported:              18
+Total Lines:              2,678
+Total Characters:        68,203
+Estimated Tokens:        17,050
 Parts Generated:              1

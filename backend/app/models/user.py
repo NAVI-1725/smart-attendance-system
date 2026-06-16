@@ -36,3 +36,8 @@ class User(Base):
         "AttendanceSession",
         back_populates="faculty",
     )
+
+    registration_sessions = relationship(
+        "CourseRegistrationSession",
+        back_populates="faculty",
+    )

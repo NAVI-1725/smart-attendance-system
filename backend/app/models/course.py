@@ -1,5 +1,4 @@
 # backend/app/models/course.py
-# backend/app/models/course.py
 
 from sqlalchemy import (
     Column,
@@ -67,5 +66,10 @@ class Course(Base):
 
     attendance_sessions = relationship(
         "AttendanceSession",
+        back_populates="course",
+    )
+
+    registration_sessions = relationship(
+        "CourseRegistrationSession",
         back_populates="course",
     )

@@ -8,6 +8,14 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
+from fastapi import UploadFile, File
+from openpyxl import load_workbook
+from io import BytesIO
+
+from app.schemas.admin_import import (
+    BulkImportResponse,
+)
+
 from app.core.constants.roles import UserRole
 from app.core.dependencies import require_admin
 from app.core.security import get_password_hash
@@ -68,6 +76,155 @@ def create_student(
     return student
 
 
+@router.post(
+    "/import",
+    response_model=BulkImportResponse,
+)
+def import_students(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    # Fix 3: Validate file type before processing
+    if not file.filename.endswith((".xlsx", ".xlsm")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Excel file required (.xlsx or .xlsm)",
+        )
+
+    created = 0
+    skipped = 0
+    errors: list[str] = []
+
+    try:
+        workbook = load_workbook(
+            filename=BytesIO(
+                file.file.read(),
+            ),
+        )
+
+        worksheet = workbook.active
+
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Excel file",
+        )
+
+    for row_number, row in enumerate(
+        worksheet.iter_rows(
+            min_row=2,
+            values_only=True,
+        ),
+        start=2,
+    ):
+        try:
+            # Fix 6: Skip truly empty rows (handles (None, None, None) case)
+            if all(cell is None for cell in row):
+                skipped += 1
+                continue
+
+            # Fix 1: Validate minimum column count
+            if len(row) < 4:
+                skipped += 1
+                errors.append(
+                    f"Row {row_number}: Expected 4 columns (ID, Name, Email, Password)",
+                )
+                continue
+
+            student_id = row[0]
+
+            full_name = (
+                str(row[1]).strip()
+                if row[1] is not None
+                else ""
+            )
+
+            email = (
+                str(row[2]).strip().lower()
+                if row[2] is not None
+                else ""
+            )
+
+            password = (
+                str(row[3]).strip()
+                if row[3] is not None
+                else ""
+            )
+
+            if not full_name:
+                skipped += 1
+                errors.append(
+                    f"Row {row_number}: Missing name",
+                )
+                continue
+
+            if not email:
+                skipped += 1
+                errors.append(
+                    f"Row {row_number}: Missing email",
+                )
+                continue
+
+            if not password:
+                skipped += 1
+                errors.append(
+                    f"Row {row_number}: Missing password",
+                )
+                continue
+
+            existing_student = (
+                db.query(User)
+                .filter(
+                    User.email == email,
+                )
+                .first()
+            )
+
+            # Fix 4: Report duplicate email reason
+            if existing_student:
+                skipped += 1
+                errors.append(
+                    f"Row {row_number}: Email already exists ({email})",
+                )
+                continue
+
+            student = User(
+                full_name=full_name,
+                email=email,
+                password_hash=get_password_hash(
+                    password,
+                ),
+                role=UserRole.STUDENT.value,
+                is_active=True,
+            )
+
+            # Fix 2: Flush per row to catch DB constraint errors early
+            try:
+                db.add(student)
+                db.flush()
+                created += 1
+            except Exception as exc:
+                db.rollback()
+                skipped += 1
+                errors.append(
+                    f"Row {row_number}: Database error — {str(exc)}",
+                )
+
+        except Exception as exc:
+            skipped += 1
+            errors.append(
+                f"Row {row_number}: {str(exc)}",
+            )
+
+    db.commit()
+
+    return {
+        "created": created,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
 @router.get(
     "",
     response_model=list[StudentResponse],
@@ -78,7 +235,8 @@ def get_students(
     students = (
         db.query(User)
         .filter(
-            User.role == "student",
+            # Fix 5: Use enum consistently
+            User.role == UserRole.STUDENT.value,
         )
         .order_by(
             User.id.asc(),
@@ -101,7 +259,8 @@ def get_student(
         db.query(User)
         .filter(
             User.id == student_id,
-            User.role == "student",
+            # Fix 5: Use enum consistently
+            User.role == UserRole.STUDENT.value,
         )
         .first()
     )
@@ -128,7 +287,8 @@ def update_student(
         db.query(User)
         .filter(
             User.id == student_id,
-            User.role == "student",
+            # Fix 5: Use enum consistently
+            User.role == UserRole.STUDENT.value,
         )
         .first()
     )
@@ -178,7 +338,8 @@ def delete_student(
         db.query(User)
         .filter(
             User.id == student_id,
-            User.role == "student",
+            # Fix 5: Use enum consistently
+            User.role == UserRole.STUDENT.value,
         )
         .first()
     )

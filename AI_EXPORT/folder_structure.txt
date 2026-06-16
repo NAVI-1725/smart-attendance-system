@@ -1,10 +1,39 @@
 FOLDER STRUCTURE
 ============================================================
 
+├── backend
+    └── app
+        ├── api
+            └── v1
+                ├── course_registration_sessions.py
+                └── faculty.py
+        ├── core
+            └── dependencies.py
+        ├── models
+            ├── __init__.py
+            ├── course.py
+            ├── course_registration_session.py
+            ├── enrollment.py
+            ├── enums.py
+            ├── faculty_action_logs.py
+            └── user.py
+        └── schemas
+            └── course_registration_session.py
 └── mobile_app
     └── lib
         └── features
-            └── faculty
+            ├── faculty
+                ├── data
+                    ├── faculty_api_service.dart
+                    └── faculty_repository.dart
+                ├── presentation
+                    └── course_registration_session_screen.dart
                 └── providers
-                    ├── course_provider.dart
                     └── faculty_provider.dart
+            ├── home
+                └── registration_sessions_screen.dart
+            └── registration
+                ├── data
+                    └── registration_api_service.dart
+                └── models
+                    └── registration_session.dart

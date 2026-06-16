@@ -17,6 +17,7 @@ from app.api.v1 import (
     admin_students,
     admin_faculty,
     admin_dashboard,
+    course_registration_sessions,
 )
 
 api_router = APIRouter()
@@ -35,3 +36,4 @@ api_router.include_router(admin_enrollments.router)
 api_router.include_router(admin_students.router)
 api_router.include_router(admin_faculty.router)
 api_router.include_router(admin_dashboard.router)
+api_router.include_router(course_registration_sessions.router)

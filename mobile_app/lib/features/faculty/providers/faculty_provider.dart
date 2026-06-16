@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../data/faculty_repository.dart';
 import '../models/attendance_detail.dart';
 import '../models/attendance_evidence.dart';
+import '../models/faculty_course.dart';
 import '../models/faculty_dashboard.dart';
 import '../models/faculty_session.dart';
 import '../models/flagged_attendance.dart';
@@ -20,6 +21,8 @@ class FacultyProvider extends ChangeNotifier {
   FacultyDashboard? dashboard;
 
   List<FacultySession> sessions = [];
+
+  List<FacultyCourse> courses = [];
 
   List<FlaggedAttendance> flaggedAttendance = [];
 
@@ -58,6 +61,26 @@ class FacultyProvider extends ChangeNotifier {
           .map(
             (item) =>
                 FacultySession.fromJson(item),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadCourses() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data =
+          await _repository.getCourses();
+
+      courses = data
+          .map(
+            (item) =>
+                FacultyCourse.fromJson(item),
           )
           .toList();
     } finally {

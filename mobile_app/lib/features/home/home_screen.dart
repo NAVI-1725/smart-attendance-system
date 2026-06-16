@@ -11,6 +11,7 @@ import '../attendance/presentation/attendance_provider.dart';
 import '../attendance/domain/attendance_status.dart';
 import '../profile/presentation/profile_screen.dart';
 import '../faculty/presentation/faculty_dashboard_screen.dart';
+import 'registration_sessions_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -239,6 +240,27 @@ class _HomeScreenState
                               MaterialPageRoute(
                                 builder: (_) =>
                                     const ProfileScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.app_registration),
+                          label: const Text(
+                            'Course Registration',
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const RegistrationSessionsScreen(),
                               ),
                             );
                           },

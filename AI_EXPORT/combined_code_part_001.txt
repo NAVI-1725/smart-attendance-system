@@ -1,117 +1,2273 @@
 ################################################################################
-FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
+FILE: backend/app/api/v1/course_registration_sessions.py
 ################################################################################
 
-// mobile_app/lib/features/faculty/providers/course_provider.dart
+# backend/app/api/v1/course_registration_sessions.py
 
-import 'package:flutter/foundation.dart';
+from datetime import datetime, timezone
 
-import '../data/course_api_service.dart';
-import '../models/course_detail.dart';
-import '../models/course_student.dart';
-import '../models/faculty_course.dart';
-import '../models/student_history.dart';
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+from sqlalchemy.orm import Session
 
-class CourseProvider extends ChangeNotifier {
-  final CourseApiService _apiService;
+from app.core.dependencies import get_current_user
+from app.db.session import get_db
+from app.models.course import Course
+from app.models.course_registration_session import CourseRegistrationSession
+from app.models.enrollment import Enrollment
+from app.models.faculty_course import FacultyCourse
+from app.models.user import User
+from app.schemas.course_registration_session import (
+    CloseRegistrationResponse,
+    JoinRegistrationResponse,
+    RegistrationSessionResponse,
+    StartRegistrationSessionRequest,
+)
 
-  CourseProvider(this._apiService);
+router = APIRouter(
+    prefix="/registration-sessions",
+    tags=["Course Registration Sessions"],
+)
 
-  bool isLoading = false;
 
-  List<FacultyCourse> courses = [];
+@router.post(
+    "/start",
+    response_model=RegistrationSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def start_registration_session(
+    data: StartRegistrationSessionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role.lower() != "faculty":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only faculty can start registration sessions",
+        )
 
-  CourseDetail? courseDetail;
+    course = (
+        db.query(Course)
+        .filter(Course.id == data.course_id)
+        .first()
+    )
 
-  List<CourseStudent> courseStudents = [];
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
 
-  List<StudentHistory> studentHistory = [];
+    faculty_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == data.course_id,
+        )
+        .first()
+    )
 
-  Future<void> loadCourses() async {
-    isLoading = true;
-    notifyListeners();
+    if not faculty_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Faculty is not assigned to this course",
+        )
 
-    try {
-      courses = await _apiService.getCourses();
-    } finally {
-      isLoading = false;
-      notifyListeners();
+    existing_active_session = (
+        db.query(CourseRegistrationSession)
+        .filter(
+            CourseRegistrationSession.course_id == data.course_id,
+            CourseRegistrationSession.is_active == True,
+        )
+        .first()
+    )
+
+    if existing_active_session:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An active registration session already exists for this course",
+        )
+
+    session = CourseRegistrationSession(
+        course_id=data.course_id,
+        faculty_id=current_user.id,
+        is_active=True,
+    )
+
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+
+    return {
+        "id": session.id,
+        "course_id": course.id,
+        "course_code": course.course_code,
+        "course_name": course.course_name,
+        "faculty_id": session.faculty_id,
+        "is_active": session.is_active,
     }
+
+
+@router.get(
+    "/open",
+    response_model=list[RegistrationSessionResponse],
+)
+def get_open_registration_sessions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sessions = (
+        db.query(
+            CourseRegistrationSession,
+            Course,
+        )
+        .join(
+            Course,
+            CourseRegistrationSession.course_id == Course.id,
+        )
+        .filter(
+            CourseRegistrationSession.is_active == True,
+        )
+        .order_by(
+            CourseRegistrationSession.id.asc(),
+        )
+        .all()
+    )
+
+    return [
+        {
+            "id": reg_session.id,
+            "course_id": course.id,
+            "course_code": course.course_code,
+            "course_name": course.course_name,
+            "faculty_id": reg_session.faculty_id,
+            "is_active": reg_session.is_active,
+        }
+        for (reg_session, course) in sessions
+    ]
+
+
+@router.post(
+    "/{session_id}/join",
+    response_model=JoinRegistrationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def join_registration_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role.lower() != "student":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only students can join registration sessions",
+        )
+
+    reg_session = (
+        db.query(CourseRegistrationSession)
+        .filter(
+            CourseRegistrationSession.id == session_id,
+        )
+        .first()
+    )
+
+    if not reg_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Registration session not found",
+        )
+
+    if not reg_session.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Registration session is no longer active",
+        )
+
+    existing_enrollment = (
+        db.query(Enrollment)
+        .filter(
+            Enrollment.student_id == current_user.id,
+            Enrollment.course_id == reg_session.course_id,
+        )
+        .first()
+    )
+
+    if existing_enrollment:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Student is already enrolled in this course",
+        )
+
+    enrollment = Enrollment(
+        student_id=current_user.id,
+        course_id=reg_session.course_id,
+    )
+
+    db.add(enrollment)
+    db.commit()
+
+    return {"message": "Enrollment successful"}
+
+
+@router.post(
+    "/{session_id}/close",
+    response_model=CloseRegistrationResponse,
+    status_code=status.HTTP_200_OK,
+)
+def close_registration_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role.lower() != "faculty":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only faculty can close registration sessions",
+        )
+
+    reg_session = (
+        db.query(CourseRegistrationSession)
+        .filter(
+            CourseRegistrationSession.id == session_id,
+        )
+        .first()
+    )
+
+    if not reg_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Registration session not found",
+        )
+
+    if reg_session.faculty_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Faculty does not own this registration session",
+        )
+
+    reg_session.is_active = False
+    reg_session.closed_at = datetime.now(timezone.utc)
+
+    db.commit()
+
+    return {"message": "Registration session closed"}
+
+################################################################################
+END FILE: backend/app/api/v1/course_registration_sessions.py
+################################################################################
+
+################################################################################
+FILE: backend/app/api/v1/faculty.py
+################################################################################
+
+# backend/app/api/v1/faculty.py
+
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
+from app.core.dependencies import get_current_user, get_db, require_faculty
+from app.core.domain_rules import (
+    ensure_faculty_owns_attendance,
+    ensure_faculty_owns_classroom,
+)
+from app.models.attendance import AttendanceAttempt
+from app.models.enums import AttendanceStatus
+from app.models.faculty_action_logs import FacultyActionLog
+from app.models.attendance_session import AttendanceSession
+from app.models.user import User
+from app.models.course import Course
+from app.models.faculty_course import FacultyCourse
+from app.models.enrollment import Enrollment
+from app.schemas.faculty import (
+    AttendanceDetailResponse,
+    AttendanceEvidenceResponse,
+    AttendanceSummaryResponse,
+    BleEvidenceResponse,
+    CourseStudentItem,
+    FacultyCourseDetail,
+    FacultyCourseItem,
+    FacultyDashboardResponse,
+    FacultySessionHistoryItem,
+    FlaggedAttendanceItem,
+    GpsEvidenceResponse,
+    StudentHistoryItem,
+)
+from app.schemas.faculty_resolution import FacultyResolutionRequest
+from app.services.session_cleanup_service import (
+    deactivate_expired_sessions,
+)
+
+router = APIRouter(
+    tags=["Faculty"],
+    dependencies=[Depends(require_faculty)],
+)
+
+
+@router.get(
+    "/courses",
+    response_model=list[FacultyCourseItem],
+)
+def get_faculty_courses(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    courses = (
+        db.query(
+            Course,
+            func.count(Enrollment.id).label(
+                "student_count",
+            ),
+        )
+        .join(
+            FacultyCourse,
+            FacultyCourse.course_id == Course.id,
+        )
+        .outerjoin(
+            Enrollment,
+            Enrollment.course_id == Course.id,
+        )
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+        )
+        .group_by(
+            Course.id,
+        )
+        .all()
+    )
+
+    results = []
+
+    for course, student_count in courses:
+        active_session = (
+            db.query(AttendanceSession)
+            .filter(
+                AttendanceSession.course_id
+                == course.id,
+                AttendanceSession.is_active == True,
+            )
+            .first()
+        )
+
+        results.append(
+            {
+                "course_id": course.id,
+                "course_code": course.course_code,
+                "course_name": course.course_name,
+                "student_count": student_count,
+                "active_session": (
+                    active_session is not None
+                ),
+            }
+        )
+
+    return results
+
+
+@router.get(
+    "/course/{course_id}",
+    response_model=FacultyCourseDetail,
+)
+def get_course_detail(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    course_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    )
+
+    if not course_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    course = (
+        db.query(Course)
+        .filter(
+            Course.id == course_id,
+        )
+        .first()
+    )
+
+    student_count = (
+        db.query(func.count(Enrollment.id))
+        .filter(
+            Enrollment.course_id == course_id,
+        )
+        .scalar()
+    )
+
+    active_session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.course_id == course_id,
+            AttendanceSession.is_active == True,
+        )
+        .first()
+    )
+
+    return {
+        "course_id": course.id,
+        "course_code": course.course_code,
+        "course_name": course.course_name,
+        "student_count": student_count,
+        "active_session": (
+            active_session is not None
+        ),
+        "active_session_id": (
+            active_session.id
+            if active_session
+            else None
+        ),
+    }
+
+
+@router.get(
+    "/course/{course_id}/students",
+    response_model=list[CourseStudentItem],
+)
+def get_course_students(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    course_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    )
+
+    if not course_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    total_sessions = (
+        db.query(func.count(AttendanceSession.id))
+        .filter(
+            AttendanceSession.course_id == course_id,
+        )
+        .scalar()
+    )
+
+    students = (
+        db.query(
+            User.id,
+            User.full_name,
+        )
+        .join(
+            Enrollment,
+            Enrollment.student_id == User.id,
+        )
+        .filter(
+            Enrollment.course_id == course_id,
+        )
+        .all()
+    )
+
+    results = []
+
+    for student_id, student_name in students:
+        confirmed_attendances = (
+            db.query(func.count(AttendanceAttempt.id))
+            .join(
+                AttendanceSession,
+                AttendanceAttempt.session_id
+                == AttendanceSession.id,
+            )
+            .filter(
+                AttendanceSession.course_id == course_id,
+                AttendanceAttempt.student_id
+                == student_id,
+                AttendanceAttempt.status
+                == AttendanceStatus.CONFIRMED,
+            )
+            .scalar()
+        )
+
+        attendance_percentage = 0.0
+
+        if total_sessions and total_sessions > 0:
+            attendance_percentage = (
+                confirmed_attendances
+                / total_sessions
+            ) * 100
+
+        results.append(
+            {
+                "student_id": student_id,
+                "student_name": student_name,
+                "attendance_percentage": round(
+                    attendance_percentage,
+                    2,
+                ),
+            }
+        )
+
+    return results
+
+
+@router.post("/attendance/resolve")
+def resolve_attendance(
+    data: FacultyResolutionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    # 1️⃣ Faculty-only authority (case-safe)
+    if current_user.role.upper() != "FACULTY":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Faculty access required",
+        )
+
+    # 2️⃣ Attendance existence (CORRECT ORM MODEL)
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(AttendanceAttempt.id == data.attendance_id)
+        .first()
+    )
+
+    if not attendance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attendance not found",
+        )
+
+    # 3️⃣ Faculty must own classroom
+    ensure_faculty_owns_classroom(
+        db,
+        current_user.id,
+        attendance.classroom_id,
+    )
+
+    # 4️⃣ Idempotent review enforcement
+    if attendance.status in (
+        AttendanceStatus.CONFIRMED,
+        AttendanceStatus.REJECTED,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attendance already reviewed",
+        )
+
+    original_status = attendance.status
+
+    # 5️⃣ Apply resolution
+    attendance.status = data.new_status
+
+    attendance.reviewed_by = current_user.id
+
+    attendance.reviewed_at = datetime.now(
+        timezone.utc,
+    )
+
+    attendance.resolution_reason = data.reason
+
+    # 6️⃣ Immutable audit log (exam-critical)
+    log = FacultyActionLog(
+        faculty_id=current_user.id,
+        attendance_id=attendance.id,
+        original_status=original_status.value,
+        new_status=data.new_status.value,
+        resolution_type=(
+            "CONFIRM"
+            if data.new_status
+            == AttendanceStatus.CONFIRMED
+            else "REJECT"
+        ),
+        reason=data.reason,
+    )
+
+    db.add(log)
+    db.commit()
+
+    return {"status": "resolved"}
+
+
+@router.get(
+    "/attendance/{attendance_id}",
+    response_model=AttendanceDetailResponse,
+)
+def get_attendance_detail(
+    attendance_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=attendance_id,
+    )
+
+    student = (
+        db.query(User)
+        .filter(
+            User.id == attendance.student_id,
+        )
+        .first()
+    )
+
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id
+            == attendance.session_id,
+        )
+        .first()
+    )
+
+    reviewed_by_name = None
+
+    if attendance.reviewed_by is not None:
+        reviewer = (
+            db.query(User)
+            .filter(
+                User.id
+                == attendance.reviewed_by,
+            )
+            .first()
+        )
+
+        if reviewer:
+            reviewed_by_name = (
+                reviewer.full_name
+            )
+
+    return {
+        "attendance_id": attendance.id,
+        "student_id": attendance.student_id,
+        "session_id": attendance.session_id,
+        "status": attendance.status,
+        "student_name": (
+            student.full_name
+            if student
+            else ""
+        ),
+        "course_name": (
+            session.course.course_name
+            if session
+            else ""
+        ),
+        "reviewed_by": reviewed_by_name,
+        "reviewed_at": attendance.reviewed_at,
+        "resolution_reason": (
+            attendance.resolution_reason
+        ),
+    }
+
+
+@router.get(
+    "/attendance/{attendance_id}/evidence",
+    response_model=AttendanceEvidenceResponse,
+)
+def get_attendance_evidence(
+    attendance_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=attendance_id,
+    )
+
+    ble_evidence = [
+        {
+            "beacon_data": evidence.ble_payload,
+            "client_timestamp": evidence.client_timestamp,
+            "server_received_timestamp": evidence.server_received_timestamp,
+        }
+        for evidence in attendance.ble_evidence
+    ]
+
+    gps = attendance.gps_evidence
+
+    gps_evidence = None
+    if gps:
+        gps_evidence = {
+            "latitude": gps.latitude,
+            "longitude": gps.longitude,
+            "accuracy_meters": gps.accuracy_meters,
+            "distance_from_classroom_meters": gps.distance_from_classroom_meters,
+            "validation_result": gps.validation_result,
+            "validation_reason": gps.validation_reason,
+        }
+
+    return {
+        "ble": ble_evidence,
+        "gps": gps_evidence,
+        "client_timestamp": (
+            attendance.ble_evidence[0].client_timestamp
+            if attendance.ble_evidence
+            else None
+        ),
+        "server_received_timestamp": (
+            attendance.ble_evidence[0].server_received_timestamp
+            if attendance.ble_evidence
+            else None
+        ),
+    }
+
+
+@router.get(
+    "/dashboard",
+    response_model=FacultyDashboardResponse,
+)
+def get_dashboard(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    today_start = datetime.now(
+        timezone.utc,
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+
+    active_sessions = (
+        db.query(func.count(AttendanceSession.id))
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceSession.is_active == True,
+        )
+        .scalar()
+    )
+
+    flagged_attendance = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.FLAGGED,
+        )
+        .scalar()
+    )
+
+    confirmed_today = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.CONFIRMED,
+            AttendanceAttempt.reviewed_at >= today_start,
+        )
+        .scalar()
+    )
+
+    rejected_today = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.REJECTED,
+            AttendanceAttempt.reviewed_at >= today_start,
+        )
+        .scalar()
+    )
+
+    return {
+        "active_sessions": active_sessions,
+        "flagged_attendance": flagged_attendance,
+        "confirmed_today": confirmed_today,
+        "rejected_today": rejected_today,
+    }
+
+
+@router.get(
+    "/sessions",
+    response_model=list[FacultySessionHistoryItem],
+)
+def get_faculty_sessions(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    sessions = (
+        db.query(AttendanceSession)
+        .filter(AttendanceSession.faculty_id == current_user.id)
+        .order_by(AttendanceSession.id.desc())
+        .all()
+    )
+
+    return [
+        {
+            "session_id": session.id,
+            "course_name": session.course.course_name,
+            "status": session.status,
+            "started_at": session.started_at,
+            "closed_at": session.closed_at,
+        }
+        for session in sessions
+    ]
+
+
+@router.get(
+    "/attendance-summary",
+    response_model=AttendanceSummaryResponse,
+)
+def get_attendance_summary(
+    classroom_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    ensure_faculty_owns_classroom(
+        db,
+        current_user.id,
+        classroom_id,
+    )
+
+    confirmed = (
+        db.query(func.count(AttendanceAttempt.id))
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+            AttendanceAttempt.status == AttendanceStatus.CONFIRMED,
+        )
+        .scalar()
+    )
+
+    flagged = (
+        db.query(func.count(AttendanceAttempt.id))
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+            AttendanceAttempt.status == AttendanceStatus.FLAGGED,
+        )
+        .scalar()
+    )
+
+    total = (
+        db.query(func.count(AttendanceAttempt.id))
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+        )
+        .scalar()
+    )
+
+    return {
+        "classroom_id": classroom_id,
+        "total": total,
+        "confirmed": confirmed,
+        "flagged": flagged,
+    }
+
+
+@router.get(
+    "/flagged-attendance",
+    response_model=list[FlaggedAttendanceItem],
+)
+def get_flagged_attendance(
+    classroom_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    ensure_faculty_owns_classroom(
+        db,
+        current_user.id,
+        classroom_id,
+    )
+
+    flagged_records = (
+        db.query(
+            AttendanceAttempt,
+            User.full_name,
+            Course.course_name,
+            AttendanceSession.started_at,
+        )
+        .join(
+            User,
+            AttendanceAttempt.student_id == User.id,
+        )
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .join(
+            Course,
+            AttendanceSession.course_id
+            == Course.id,
+        )
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+            AttendanceAttempt.status
+            == AttendanceStatus.FLAGGED,
+        )
+        .order_by(
+            AttendanceAttempt.id.desc(),
+        )
+        .all()
+    )
+
+    return [
+        {
+            "attendance_id": attendance.id,
+            "student_name": student_name,
+            "course_name": course_name,
+            "status": attendance.status.value,
+            "timestamp": started_at,
+        }
+        for (
+            attendance,
+            student_name,
+            course_name,
+            started_at,
+        ) in flagged_records
+    ]
+
+
+@router.get(
+    "/student/{student_id}/history",
+    response_model=list[StudentHistoryItem],
+)
+def get_student_history(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+
+    history_records = (
+        db.query(
+            AttendanceAttempt,
+            Course.course_name,
+        )
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .join(
+            Course,
+            AttendanceSession.course_id
+            == Course.id,
+        )
+        .join(
+            FacultyCourse,
+            FacultyCourse.course_id
+            == Course.id,
+        )
+        .filter(
+            AttendanceAttempt.student_id
+            == student_id,
+            FacultyCourse.faculty_id
+            == current_user.id,
+        )
+        .order_by(
+            AttendanceAttempt.id.desc(),
+        )
+        .all()
+    )
+
+    if not history_records:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student history not found",
+        )
+
+    return [
+        {
+            "attendance_id": attendance.id,
+            "course_name": course_name,
+            "status": attendance.status.value,
+            "timestamp": (
+                attendance.reviewed_at
+                or attendance.created_at
+            ),
+        }
+        for (
+            attendance,
+            course_name,
+        ) in history_records
+    ]
+
+################################################################################
+END FILE: backend/app/api/v1/faculty.py
+################################################################################
+
+################################################################################
+FILE: backend/app/core/dependencies.py
+################################################################################
+
+# backend/app/core/dependencies.py
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt, JWTError
+from sqlalchemy.orm import Session
+
+from app.core.config import settings
+from app.db.session import get_db
+from app.models.permissions import Permission
+from app.models.user import User
+from app.core.constants.roles import UserRole
+
+security = HTTPBearer()
+
+ROLE_PERMISSIONS = {
+    UserRole.ADMIN.value: {
+        Permission.manage_system,
+        Permission.manage_faculty,
+        Permission.take_attendance,
+    },
+    UserRole.FACULTY.value: {
+        Permission.take_attendance,
+    },
+    UserRole.STUDENT.value: set(),
+}
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
+    token = credentials.credentials
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
+        )
+        user_id: str = payload.get("sub")
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        )
+
+    user = db.query(User).filter(User.id == int(user_id)).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+
+    # Normalize role coming from DB (DB stores uppercase like "FACULTY")
+    # Safest option: coerce into canonical lowercase string if needed
+    if isinstance(user.role, str):
+        try:
+            user.role = user.role.lower()
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid user role",
+            )
+
+    return user
+
+
+def require_faculty(current_user=Depends(get_current_user)):
+    if current_user.role != UserRole.FACULTY.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Faculty access required",
+        )
+    return current_user
+
+
+def require_admin(current_user=Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+
+def require_admin_or_faculty(
+    current_user=Depends(get_current_user),
+):
+    if current_user.role not in [
+        UserRole.ADMIN.value,
+        UserRole.FACULTY.value,
+    ]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Faculty or Admin access required",
+        )
+
+    return current_user
+
+
+def require_permission(permission: Permission):
+    def checker(current_user=Depends(get_current_user)):
+        allowed = ROLE_PERMISSIONS.get(current_user.role, set())
+        if permission not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied",
+            )
+        return current_user
+
+    return checker
+
+################################################################################
+END FILE: backend/app/core/dependencies.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/__init__.py
+################################################################################
+
+# backend/app/models/__init__.py
+from app.models.user import User as User
+from app.models.device import Device as Device
+from app.models.attendance import AttendanceAttempt as AttendanceAttempt
+from app.models.attendance_ble_evidence import (
+    AttendanceBleEvidence as AttendanceBleEvidence,
+)
+from app.models.attendance_gps_evidence import (
+    AttendanceGpsEvidence as AttendanceGpsEvidence,
+)
+from app.models.classroom import Classroom as Classroom
+from app.models.enrollment import Enrollment as Enrollment
+from app.models.auth_session import AuthSession as AuthSession
+from app.models.attendance_session import AttendanceSession as AttendanceSession
+from app.models.attendance_ble_nonce import AttendanceBLENonce as AttendanceBLENonce
+from app.models.trusted_ble_beacon import TrustedBLEBeacon as TrustedBLEBeacon
+from app.models.beacon_secret import BeaconSecret as BeaconSecret
+from app.models.course import Course
+from app.models.faculty_course import FacultyCourse
+from app.models.course_registration_session import (
+    CourseRegistrationSession,
+)
+
+################################################################################
+END FILE: backend/app/models/__init__.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/course.py
+################################################################################
+
+# backend/app/models/course.py
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    UniqueConstraint,
+    Index,
+)
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+
+from app.db.base_class import Base
+
+
+class Course(Base):
+    __tablename__ = "courses"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "course_code",
+            name="uq_course_code",
+        ),
+        Index(
+            "ix_course_code",
+            "course_code",
+        ),
+    )
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    course_code = Column(
+        String(50),
+        nullable=False,
+    )
+
+    course_name = Column(
+        String(255),
+        nullable=False,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+
+    faculty_assignments = relationship(
+        "FacultyCourse",
+        back_populates="course",
+        cascade="all, delete-orphan",
+    )
+
+    enrollments = relationship(
+        "Enrollment",
+        back_populates="course",
+        cascade="all, delete-orphan",
+    )
+
+    attendance_sessions = relationship(
+        "AttendanceSession",
+        back_populates="course",
+    )
+
+    registration_sessions = relationship(
+        "CourseRegistrationSession",
+        back_populates="course",
+    )
+
+################################################################################
+END FILE: backend/app/models/course.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/course_registration_session.py
+################################################################################
+
+# backend/app/models/course_registration_session.py
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    ForeignKey,
+    Boolean,
+    DateTime,
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
+from app.db.base_class import Base
+
+
+class CourseRegistrationSession(Base):
+    __tablename__ = "course_registration_sessions"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    course_id = Column(
+        Integer,
+        ForeignKey("courses.id"),
+        nullable=False,
+        index=True,
+    )
+
+    faculty_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    is_active = Column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    closed_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    course = relationship(
+        "Course",
+        back_populates="registration_sessions",
+    )
+
+    faculty = relationship(
+        "User",
+        back_populates="registration_sessions",
+    )
+
+################################################################################
+END FILE: backend/app/models/course_registration_session.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/enrollment.py
+################################################################################
+
+# backend\app\models\enrollment.py
+
+from sqlalchemy import Column, Integer, ForeignKey, UniqueConstraint, DateTime
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
+from app.db.base_class import Base
+
+
+class Enrollment(Base):
+    __tablename__ = "enrollments"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    student_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=False,
+        index=True,
+    )
+
+    course_id = Column(
+        Integer,
+        ForeignKey("courses.id"),
+        nullable=False,
+        index=True,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    student = relationship(
+        "User",
+        back_populates="enrollments",
+    )
+
+    course = relationship(
+        "Course",
+        back_populates="enrollments",
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "course_id",
+            name="uq_student_course",
+        ),
+    )
+
+################################################################################
+END FILE: backend/app/models/enrollment.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/enums.py
+################################################################################
+
+# backend/app/models/enums.py
+
+from enum import Enum
+
+
+class AttendanceStatus(str, Enum):
+    """
+    Final attendance decision stored in the attendance table.
+
+    Lifecycle:
+
+    Attendance Submission:
+        CONFIRMED
+        FLAGGED
+
+    Faculty Review:
+        CONFIRMED
+        REJECTED
+    """
+
+    CONFIRMED = "CONFIRMED"
+    FLAGGED = "FLAGGED"
+    REJECTED = "REJECTED"
+
+
+class AttendanceSessionStatus(str, Enum):
+    """
+    Lifecycle state of an attendance session.
+
+    ACTIVE:
+        Session is accepting attendance submissions.
+
+    CLOSED:
+        Faculty manually closed the session.
+
+    EXPIRED:
+        Session automatically expired after expires_at.
+    """
+
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+    EXPIRED = "EXPIRED"
+
+
+class GPSValidationResult(str, Enum):
+    VALID = "VALID"
+    OUTSIDE_GEOFENCE = "OUTSIDE_GEOFENCE"
+    LOW_ACCURACY = "LOW_ACCURACY"
+    STALE_LOCATION = "STALE_LOCATION"
+    MISSING_LOCATION = "MISSING_LOCATION"
+
+
+class AttendanceEvidenceResult(str, Enum):
+    CONFIRMED = "CONFIRMED"
+    FLAGGED = "FLAGGED"
+
+################################################################################
+END FILE: backend/app/models/enums.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/faculty_action_logs.py
+################################################################################
+
+# backend\app\models\faculty_action_logs.py
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy.sql import func
+from app.db.base_class import Base
+
+
+class FacultyActionLog(Base):
+    __tablename__ = "faculty_action_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    faculty_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
+    attendance_id = Column(
+        Integer,
+        ForeignKey("attendance.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
+    original_status = Column(String(20), nullable=False)
+    new_status = Column(String(20), nullable=False)
+
+    resolution_type = Column(
+        String(20),
+        nullable=False,
+    )
+
+    reason = Column(Text, nullable=False)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+################################################################################
+END FILE: backend/app/models/faculty_action_logs.py
+################################################################################
+
+################################################################################
+FILE: backend/app/models/user.py
+################################################################################
+
+# backend/app/models/user.py
+
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
+# NOTE:
+# Alembic uses app.db.base.Base as the canonical metadata source.
+# This import is aligned to ensure the User table is registered
+# in the same MetaData used by Alembic autogeneration.
+from app.db.base_class import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    full_name = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    faculty_courses = relationship(
+        "FacultyCourse",
+        back_populates="faculty",
+    )
+
+    enrollments = relationship(
+        "Enrollment",
+        back_populates="student",
+    )
+
+    attendance_sessions = relationship(
+        "AttendanceSession",
+        back_populates="faculty",
+    )
+
+    registration_sessions = relationship(
+        "CourseRegistrationSession",
+        back_populates="faculty",
+    )
+
+################################################################################
+END FILE: backend/app/models/user.py
+################################################################################
+
+################################################################################
+FILE: backend/app/schemas/course_registration_session.py
+################################################################################
+
+# backend/app/schemas/course_registration_session.py
+
+from pydantic import BaseModel
+
+
+class StartRegistrationSessionRequest(BaseModel):
+    course_id: int
+
+
+class RegistrationSessionResponse(BaseModel):
+    id: int
+
+    course_id: int
+    course_code: str
+    course_name: str
+
+    faculty_id: int
+
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+class JoinRegistrationResponse(BaseModel):
+    message: str
+
+
+class CloseRegistrationResponse(BaseModel):
+    message: str
+
+################################################################################
+END FILE: backend/app/schemas/course_registration_session.py
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/data/faculty_api_service.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/data/faculty_api_service.dart
+
+import 'package:dio/dio.dart';
+
+import '../../../core/services/api_client.dart';
+import '../models/classroom.dart';
+
+class FacultyApiService {
+  final ApiClient _apiClient;
+
+  FacultyApiService(this._apiClient);
+
+  Future<Map<String, dynamic>> getDashboard() async {
+    final Response response = await _apiClient.dio.get(
+      '/faculty/dashboard',
+    );
+
+    return Map<String, dynamic>.from(
+      response.data as Map,
+    );
   }
 
-  Future<void> loadCourseDetail(
-    int courseId,
+  Future<List<Classroom>> getClassrooms() async {
+    final Response response = await _apiClient.dio.get(
+      '/classrooms',
+    );
+
+    final List<dynamic> data =
+        response.data as List<dynamic>;
+
+    return data
+        .map(
+          (item) => Classroom.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getFlaggedAttendance({
+    required int classroomId,
+  }) async {
+    final Response response = await _apiClient.dio.get(
+      '/faculty/flagged-attendance',
+      queryParameters: {
+        'classroom_id': classroomId,
+      },
+    );
+
+    return (response.data as List)
+        .map(
+          (item) => Map<String, dynamic>.from(
+            item as Map,
+          ),
+        )
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> getAttendanceDetail(
+    int attendanceId,
   ) async {
-    isLoading = true;
-    notifyListeners();
+    final Response response = await _apiClient.dio.get(
+      '/faculty/attendance/$attendanceId',
+    );
 
-    try {
-      courseDetail =
-          await _apiService.getCourseDetail(
-        courseId,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    return Map<String, dynamic>.from(
+      response.data as Map,
+    );
   }
 
-  Future<void> loadCourseStudents(
-    int courseId,
+  Future<Map<String, dynamic>> getAttendanceEvidence(
+    int attendanceId,
   ) async {
-    isLoading = true;
-    notifyListeners();
+    final Response response = await _apiClient.dio.get(
+      '/faculty/attendance/$attendanceId/evidence',
+    );
 
+    return Map<String, dynamic>.from(
+      response.data as Map,
+    );
+  }
+
+  Future<void> resolveAttendance({
+    required int attendanceId,
+    required String status,
+    required String reason,
+  }) async {
     try {
-      courseStudents =
-          await _apiService.getCourseStudents(
-        courseId,
+      await _apiClient.dio.post(
+        '/faculty/attendance/resolve',
+        data: {
+          'attendance_id': attendanceId,
+          'new_status': status,
+          'reason': reason,
+        },
       );
-    } finally {
-      isLoading = false;
-      notifyListeners();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        throw Exception(
+          'Attendance already reviewed',
+        );
+      }
+
+      rethrow;
     }
   }
 
-  Future<void> loadStudentHistory(
-    int studentId,
+  Future<List<Map<String, dynamic>>> getSessions() async {
+    final Response response = await _apiClient.dio.get(
+      '/faculty/sessions',
+    );
+
+    return (response.data as List)
+        .map(
+          (item) => Map<String, dynamic>.from(
+            item as Map,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> startSession({
+    required int courseId,
+    required int classroomId,
+    required int durationMinutes,
+  }) async {
+    await _apiClient.dio.post(
+      '/sessions/start',
+      data: {
+        'course_id': courseId,
+        'classroom_id': classroomId,
+        'duration_minutes': durationMinutes,
+      },
+    );
+  }
+
+  Future<void> closeSession(
+    int sessionId,
   ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      studentHistory =
-          await _apiService.getStudentHistory(
-        studentId,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    await _apiClient.dio.post(
+      '/sessions/$sessionId/close',
+    );
   }
 
-  void clearCourseDetail() {
-    courseDetail = null;
-    courseStudents = [];
-    notifyListeners();
+  Future<Map<String, dynamic>> getSessionAttendance(
+    int sessionId,
+  ) async {
+    final Response response = await _apiClient.dio.get(
+      '/sessions/$sessionId/attendance',
+    );
+
+    return Map<String, dynamic>.from(
+      response.data as Map,
+    );
   }
 
-  void clearStudentHistory() {
-    studentHistory = [];
-    notifyListeners();
-  }
+  Future<List<Map<String, dynamic>>> getCourses() async {
+    final Response response = await _apiClient.dio.get(
+      '/faculty/courses',
+    );
 
-  void clearAll() {
-    courses = [];
-    courseDetail = null;
-    courseStudents = [];
-    studentHistory = [];
-    notifyListeners();
+    return (response.data as List)
+        .map(
+          (item) => Map<String, dynamic>.from(
+            item as Map,
+          ),
+        )
+        .toList();
   }
 }
 
 ################################################################################
-END FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
+END FILE: mobile_app/lib/features/faculty/data/faculty_api_service.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/data/faculty_repository.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/data/faculty_repository.dart
+
+import 'faculty_api_service.dart';
+
+class FacultyRepository {
+  final FacultyApiService _apiService;
+
+  FacultyRepository(this._apiService);
+
+  Future<Map<String, dynamic>> getDashboard() {
+    return _apiService.getDashboard();
+  }
+
+  Future<List<Map<String, dynamic>>> getFlaggedAttendance({
+    required int classroomId,
+  }) {
+    return _apiService.getFlaggedAttendance(
+      classroomId: classroomId,
+    );
+  }
+
+  Future<Map<String, dynamic>> getAttendanceDetail(
+    int attendanceId,
+  ) {
+    return _apiService.getAttendanceDetail(
+      attendanceId,
+    );
+  }
+
+  Future<Map<String, dynamic>> getAttendanceEvidence(
+    int attendanceId,
+  ) {
+    return _apiService.getAttendanceEvidence(
+      attendanceId,
+    );
+  }
+
+  Future<void> resolveAttendance({
+    required int attendanceId,
+    required String status,
+    required String reason,
+  }) {
+    return _apiService.resolveAttendance(
+      attendanceId: attendanceId,
+      status: status,
+      reason: reason,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getSessions() {
+    return _apiService.getSessions();
+  }
+
+  Future<void> startSession({
+    required int courseId,
+    required int classroomId,
+    required int durationMinutes,
+  }) {
+    return _apiService.startSession(
+      courseId: courseId,
+      classroomId: classroomId,
+      durationMinutes: durationMinutes,
+    );
+  }
+
+  Future<void> closeSession(
+    int sessionId,
+  ) {
+    return _apiService.closeSession(
+      sessionId,
+    );
+  }
+
+  Future<Map<String, dynamic>> getSessionAttendance(
+    int sessionId,
+  ) {
+    return _apiService.getSessionAttendance(
+      sessionId,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getCourses() {
+    return _apiService.getCourses();
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/data/faculty_repository.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/course_registration_session_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/course_registration_session_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/config/app_bootstrap.dart';
+import '../../registration/data/registration_api_service.dart';
+import '../../registration/models/registration_session.dart';
+import 'faculty_provider.dart';
+
+// ---------------------------------------------------------------------------
+// Providers
+// ---------------------------------------------------------------------------
+
+final _registrationApiServiceProvider =
+    Provider<RegistrationApiService>(
+  (ref) => RegistrationApiService(
+    AppBootstrap.apiClient,
+  ),
+);
+
+final _openRegistrationSessionsProvider =
+    FutureProvider.autoDispose<List<RegistrationSession>>(
+  (ref) async {
+    final service =
+        ref.read(_registrationApiServiceProvider);
+    final raw = await service.getOpenSessions();
+    return raw
+        .map(RegistrationSession.fromJson)
+        .toList();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
+class CourseRegistrationSessionScreen
+    extends ConsumerStatefulWidget {
+  const CourseRegistrationSessionScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<CourseRegistrationSessionScreen> createState() =>
+      _CourseRegistrationSessionScreenState();
+}
+
+class _CourseRegistrationSessionScreenState
+    extends ConsumerState<CourseRegistrationSessionScreen> {
+  bool _isActionLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) {
+      ref.read(facultyProvider).loadCourses();
+    });
+  }
+
+  Future<void> _startSession(
+    int courseId,
+  ) async {
+    setState(() => _isActionLoading = true);
+
+    try {
+      final service = ref.read(
+        _registrationApiServiceProvider,
+      );
+      await service.startSession(
+        courseId: courseId,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registration session started',
+          ),
+        ),
+      );
+
+      ref.invalidate(
+        _openRegistrationSessionsProvider,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(
+          () => _isActionLoading = false,
+        );
+      }
+    }
+  }
+
+  Future<void> _closeSession(
+    int sessionId,
+  ) async {
+    setState(() => _isActionLoading = true);
+
+    try {
+      final service = ref.read(
+        _registrationApiServiceProvider,
+      );
+      await service.closeSession(
+        sessionId: sessionId,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Registration session closed',
+          ),
+        ),
+      );
+
+      ref.invalidate(
+        _openRegistrationSessionsProvider,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(
+          () => _isActionLoading = false,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final facultyState =
+        ref.watch(facultyProvider);
+    final openSessionsAsync = ref.watch(
+      _openRegistrationSessionsProvider,
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Registration Sessions',
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref
+              .read(facultyProvider)
+              .loadCourses();
+          ref.invalidate(
+            _openRegistrationSessionsProvider,
+          );
+        },
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // ----------------------------------------------------------
+            // Section: Assigned Courses — Start Registration
+            // ----------------------------------------------------------
+            Text(
+              'My Courses',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge,
+            ),
+            const SizedBox(height: 8),
+
+            if (facultyState.isLoading &&
+                facultyState.courses.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8,
+                ),
+                child: Center(
+                  child:
+                      CircularProgressIndicator(),
+                ),
+              )
+            else if (facultyState.courses.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 8,
+                ),
+                child: Text(
+                  'No courses assigned',
+                ),
+              )
+            else
+              ...facultyState.courses.map(
+                (course) => Card(
+                  margin: const EdgeInsets.only(
+                    bottom: 12,
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Text(
+                                course.courseCode,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium,
+                              ),
+                              const SizedBox(
+                                height: 4,
+                              ),
+                              Text(
+                                course.courseName,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed:
+                              _isActionLoading
+                                  ? null
+                                  : () =>
+                                      _startSession(
+                                        course
+                                            .courseId,
+                                      ),
+                          child: const Text(
+                            'Start Registration',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 24),
+
+            // ----------------------------------------------------------
+            // Section: Active Registration Sessions
+            // ----------------------------------------------------------
+            Text(
+              'Active Sessions',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge,
+            ),
+            const SizedBox(height: 8),
+
+            openSessionsAsync.when(
+              loading: () => const Center(
+                child:
+                    CircularProgressIndicator(),
+              ),
+              error: (err, _) => Text(
+                'Error loading sessions: $err',
+              ),
+              data: (sessions) {
+                if (sessions.isEmpty) {
+                  return const Text(
+                    'No active registration sessions',
+                  );
+                }
+
+                return Column(
+                  children: sessions.map(
+                    (session) {
+                      return Card(
+                        margin:
+                            const EdgeInsets.only(
+                          bottom: 12,
+                        ),
+                        child: Padding(
+                          padding:
+                              const EdgeInsets.all(
+                            16,
+                          ),
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Text(
+                                session.courseName,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.titleMedium,
+                              ),
+                              const SizedBox(
+                                height: 4,
+                              ),
+                              Text(
+                                session.courseCode,
+                                style:
+                                    const TextStyle(
+                                  color:
+                                      Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(
+                                height: 8,
+                              ),
+                              Container(
+                                padding:
+                                    const EdgeInsets
+                                        .symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration:
+                                    BoxDecoration(
+                                  color: session
+                                          .isActive
+                                      ? Colors.green
+                                          .shade100
+                                      : Colors.grey
+                                          .shade200,
+                                  borderRadius:
+                                      BorderRadius
+                                          .circular(
+                                    4,
+                                  ),
+                                ),
+                                child: Text(
+                                  session.isActive
+                                      ? 'Active'
+                                      : 'Closed',
+                                  style: TextStyle(
+                                    color: session
+                                            .isActive
+                                        ? Colors.green
+                                            .shade800
+                                        : Colors.grey
+                                            .shade700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(
+                                height: 12,
+                              ),
+                              SizedBox(
+                                width:
+                                    double.infinity,
+                                child:
+                                    OutlinedButton(
+                                  onPressed:
+                                      _isActionLoading
+                                          ? null
+                                          : () =>
+                                              _closeSession(
+                                                session
+                                                    .id,
+                                              ),
+                                  child: const Text(
+                                    'Close Registration',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ).toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/course_registration_session_screen.dart
 ################################################################################
 
 ################################################################################
@@ -125,6 +2281,7 @@ import 'package:flutter/foundation.dart';
 import '../data/faculty_repository.dart';
 import '../models/attendance_detail.dart';
 import '../models/attendance_evidence.dart';
+import '../models/faculty_course.dart';
 import '../models/faculty_dashboard.dart';
 import '../models/faculty_session.dart';
 import '../models/flagged_attendance.dart';
@@ -140,6 +2297,8 @@ class FacultyProvider extends ChangeNotifier {
   FacultyDashboard? dashboard;
 
   List<FacultySession> sessions = [];
+
+  List<FacultyCourse> courses = [];
 
   List<FlaggedAttendance> flaggedAttendance = [];
 
@@ -178,6 +2337,26 @@ class FacultyProvider extends ChangeNotifier {
           .map(
             (item) =>
                 FacultySession.fromJson(item),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadCourses() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data =
+          await _repository.getCourses();
+
+      courses = data
+          .map(
+            (item) =>
+                FacultyCourse.fromJson(item),
           )
           .toList();
     } finally {
@@ -315,5 +2494,365 @@ class FacultyProvider extends ChangeNotifier {
 
 ################################################################################
 END FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/home/registration_sessions_screen.dart
+################################################################################
+
+// mobile_app/lib/features/home/registration_sessions_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/config/app_bootstrap.dart';
+import '../registration/data/registration_api_service.dart';
+import '../registration/models/registration_session.dart';
+
+// ---------------------------------------------------------------------------
+// Providers
+// ---------------------------------------------------------------------------
+
+final _studentRegistrationApiProvider =
+    Provider<RegistrationApiService>(
+  (ref) => RegistrationApiService(
+    AppBootstrap.apiClient,
+  ),
+);
+
+final _openSessionsForStudentProvider =
+    FutureProvider.autoDispose<List<RegistrationSession>>(
+  (ref) async {
+    final service = ref.read(
+      _studentRegistrationApiProvider,
+    );
+    final raw = await service.getOpenSessions();
+    return raw
+        .map(RegistrationSession.fromJson)
+        .toList();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
+class RegistrationSessionsScreen
+    extends ConsumerStatefulWidget {
+  const RegistrationSessionsScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<RegistrationSessionsScreen> createState() =>
+      _RegistrationSessionsScreenState();
+}
+
+class _RegistrationSessionsScreenState
+    extends ConsumerState<RegistrationSessionsScreen> {
+  final Set<int> _joiningSessionIds = {};
+
+  Future<void> _joinSession(
+    int sessionId,
+  ) async {
+    setState(
+      () => _joiningSessionIds.add(sessionId),
+    );
+
+    try {
+      final service = ref.read(
+        _studentRegistrationApiProvider,
+      );
+      await service.joinSession(
+        sessionId: sessionId,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Successfully enrolled in course',
+          ),
+        ),
+      );
+
+      ref.invalidate(
+        _openSessionsForStudentProvider,
+      );
+    } catch (e) {
+      print(
+        'JOIN SESSION ERROR: $e',
+      );
+
+      if (!mounted) return;
+
+      String message =
+          'Unable to join course';
+
+      final errorText =
+          e.toString().toLowerCase();
+
+      if (errorText.contains('409')) {
+        message =
+            'You are already enrolled in this course';
+      }
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(message),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(
+          () => _joiningSessionIds
+              .remove(sessionId),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final openSessionsAsync = ref.watch(
+      _openSessionsForStudentProvider,
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Course Registration',
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(
+            _openSessionsForStudentProvider,
+          );
+        },
+        child: openSessionsAsync.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(),
+          ),
+          error: (err, _) => Center(
+            child: Padding(
+              padding:
+                  const EdgeInsets.all(16),
+              child: Text(
+                'Error loading sessions: $err',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          data: (sessions) {
+            if (sessions.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No open registration sessions available',
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding:
+                  const EdgeInsets.all(16),
+              itemCount: sessions.length,
+              itemBuilder: (context, index) {
+                final session =
+                    sessions[index];
+                final isJoining =
+                    _joiningSessionIds
+                        .contains(session.id);
+
+                return Card(
+                  margin:
+                      const EdgeInsets.only(
+                    bottom: 12,
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          session.courseCode,
+                          style: Theme.of(
+                            context,
+                          )
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontWeight:
+                                    FontWeight
+                                        .bold,
+                              ),
+                        ),
+                        const SizedBox(
+                          height: 4,
+                        ),
+                        Text(
+                          session.courseName,
+                        ),
+                        const SizedBox(
+                          height: 12,
+                        ),
+                        SizedBox(
+                          width:
+                              double.infinity,
+                          child:
+                              ElevatedButton(
+                            onPressed:
+                                isJoining
+                                    ? null
+                                    : () =>
+                                        _joinSession(
+                                          session
+                                              .id,
+                                        ),
+                            child: isJoining
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child:
+                                        CircularProgressIndicator(
+                                      strokeWidth:
+                                          2,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Join Course',
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/home/registration_sessions_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/registration/data/registration_api_service.dart
+################################################################################
+
+// mobile_app/lib/features/registration/data/registration_api_service.dart
+
+import '../../../core/services/api_client.dart';
+
+class RegistrationApiService {
+  final ApiClient _apiClient;
+
+  RegistrationApiService(this._apiClient);
+
+  Future<Map<String, dynamic>> startSession({
+    required int courseId,
+  }) async {
+    final response = await _apiClient.dio.post(
+      '/registration-sessions/start',
+      data: {
+        'course_id': courseId,
+      },
+    );
+
+    return Map<String, dynamic>.from(
+      response.data as Map,
+    );
+  }
+
+  Future<void> closeSession({
+    required int sessionId,
+  }) async {
+    await _apiClient.dio.post(
+      '/registration-sessions/$sessionId/close',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getOpenSessions() async {
+    final response = await _apiClient.dio.get(
+      '/registration-sessions/open',
+    );
+
+    return (response.data as List)
+        .map(
+          (item) => Map<String, dynamic>.from(
+            item as Map,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> joinSession({
+    required int sessionId,
+  }) async {
+    await _apiClient.dio.post(
+      '/registration-sessions/$sessionId/join',
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/registration/data/registration_api_service.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/registration/models/registration_session.dart
+################################################################################
+
+// mobile_app/lib/features/registration/models/registration_session.dart
+
+class RegistrationSession {
+  final int id;
+
+  final int courseId;
+  final String courseCode;
+  final String courseName;
+
+  final int facultyId;
+
+  final bool isActive;
+
+  const RegistrationSession({
+    required this.id,
+    required this.courseId,
+    required this.courseCode,
+    required this.courseName,
+    required this.facultyId,
+    required this.isActive,
+  });
+
+  factory RegistrationSession.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return RegistrationSession(
+      id: json['id'] as int,
+      courseId: json['course_id'] as int,
+      courseCode: json['course_code'] as String,
+      courseName: json['course_name'] as String,
+      facultyId: json['faculty_id'] as int,
+      isActive: json['is_active'] as bool,
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/registration/models/registration_session.dart
 ################################################################################
 

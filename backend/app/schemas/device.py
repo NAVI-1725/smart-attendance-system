@@ -12,3 +12,10 @@ class DeviceUnbindRequest(BaseModel):
 
 class SelfUnbindResponse(BaseModel):
     message: str
+
+
+class DeviceSearchResponse(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    role: str

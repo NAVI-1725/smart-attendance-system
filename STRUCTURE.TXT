@@ -12,16 +12,6 @@
         📄 .ruff.toml
         📁 .ruff_cache/
         📁 alembic/
-            📄 README
-            📁 __pycache__/  → (skipped: irrelevant)
-            📄 env.py
-            📄 script.py.mako
-            📁 versions/
-                📄 581304ef2f16_add_attendance_gps_evidence.py
-                📁 __pycache__/  → (skipped: irrelevant)
-                📄 b0c7fdca0493_add_gps_validation_result_enum.py
-                📄 c63cbdde1a3a_phase5_review_metadata.py
-                📄 ffa2c8940924_initial_phase1_schema.py
         📄 alembic.ini
         📁 app/
             📁 __pycache__/  → (skipped: irrelevant)
@@ -30,11 +20,19 @@
                     📄 __init__.py
                     📁 __pycache__/  → (skipped: irrelevant)
                     📄 admin.py
+                    📄 admin_courses.py
+                    📄 admin_dashboard.py
+                    📄 admin_enrollments.py
+                    📄 admin_faculty.py
+                    📄 admin_faculty_courses.py
+                    📄 admin_import.py
+                    📄 admin_students.py
                     📄 api.py
                     📄 attendance.py
                     📄 auth.py
                     📄 beacons.py
                     📄 classrooms.py
+                    📄 course_registration_sessions.py
                     📄 devices.py
                     📄 faculty.py
                     📄 router.py
@@ -78,6 +76,7 @@
                 📄 beacon_secret.py
                 📄 classroom.py
                 📄 course.py
+                📄 course_registration_session.py
                 📄 device.py
                 📄 enrollment.py
                 📄 enums.py
@@ -89,9 +88,17 @@
             📁 routers/
             📁 schemas/
                 📁 __pycache__/  → (skipped: irrelevant)
+                📄 admin_course.py
+                📄 admin_dashboard.py
+                📄 admin_enrollment.py
+                📄 admin_faculty.py
+                📄 admin_faculty_course.py
+                📄 admin_import.py
+                📄 admin_student.py
                 📄 attendance.py
                 📄 auth.py
                 📄 classroom.py
+                📄 course_registration_session.py
                 📄 device.py
                 📄 faculty.py
                 📄 faculty_resolution.py
@@ -120,51 +127,25 @@
     📄 code.py
     📄 config.json
     📁 cv-audit-module/
+        📁 models/
+        📁 src/
+        📁 tests/
+            📁 sample_images/
     📁 database/
-        📁 backups/
-        📁 migrations/
-        📁 schema/
-        📁 seeds/
     📄 debug.py
     📁 deployment/
-        📁 docker/
-        📁 kubernetes/
-        📁 scripts/
     📁 documentation/
-        📁 api/
-        📁 design/
-            📁 sequence_diagrams/
-        📁 research/
-        📁 srs/
-        📁 testing/
-            📁 test_results/
-        📁 user_manuals/
-        📁 viva/
     📄 export_log.txt
     📁 faculty-dashboard/
     📁 iot-beacon/
         📄 .gitignore
         📁 .pio/
-            📁 build/
-                📁 esp32dev/
-                📄 project.checksum
-            📁 libdeps/
         📁 .vscode/  → (skipped: irrelevant)
         📁 include/
-            📄 beacon_config.h
-            📄 crypto_utils.h
         📄 platformio.ini
         📁 src/
-            📄 crypto_utils.cpp
-            📄 main.cpp
     📁 mobile_app/
         📁 .dart_tool/
-            📁 dartpad/
-                📄 web_plugin_registrant.dart
-            📁 flutter_build/
-            📄 package_config.json
-            📄 package_graph.json
-            📄 version
         📄 .flutter-plugins-dependencies
         📄 .gitignore
         📁 .idea/  → (skipped: irrelevant)
@@ -172,16 +153,191 @@
         📄 README.md
         📄 analysis_options.yaml
         📁 android/
+        📁 assets/
         📁 build/
         📁 ios/
         📁 lib/
+            📁 core/
+                📁 config/
+                    📄 app_bootstrap.dart
+                    📄 app_config.dart
+                📁 providers/
+                    📄 api_client_provider.dart
+                📁 services/
+                    📄 api_client.dart
+                    📁 ble/
+                        📄 ble_beacon_payload.dart
+                        📄 ble_scan_result.dart
+                        📄 ble_scan_sample.dart
+                        📄 ble_service.dart
+                        📄 ble_service_provider.dart
+                        📄 bluetooth_disabled_exception.dart
+                        📁 evaluation/
+                            📄 ble_beacon_stats.dart
+                            📄 ble_consistency_evaluator.dart
+                            📄 ble_consistency_result.dart
+                            📄 ble_evidence_mapper.dart
+                            📄 ble_proximity_level.dart
+                        📄 flutter_ble_service.dart
+                        📄 mock_ble_service.dart
+                    📄 device_id_service.dart
+                    📄 local_storage_service.dart
+                📁 utils/
+            📁 features/
+                📁 admin/
+                    📁 data/
+                        📄 admin_api_service.dart
+                        📄 admin_device_api_service.dart
+                        📄 admin_repository.dart
+                    📁 models/
+                        📄 admin_beacon.dart
+                        📄 admin_classroom.dart
+                        📄 admin_course.dart
+                        📄 admin_faculty.dart
+                        📄 admin_student.dart
+                        📄 classroom.dart
+                        📄 device_search_user.dart
+                        📄 enrollment.dart
+                        📄 faculty_course_assignment.dart
+                        📄 system_summary.dart
+                    📁 presentation/
+                        📄 admin_dashboard_screen.dart
+                        📄 admin_provider.dart
+                        📁 beacons/
+                            📄 beacon_management_screen.dart
+                            📄 create_beacon_screen.dart
+                            📄 edit_beacon_screen.dart
+                        📁 classrooms/
+                            📄 classroom_management_screen.dart
+                            📄 create_classroom_screen.dart
+                            📄 edit_classroom_screen.dart
+                        📁 courses/
+                            📄 course_create_screen.dart
+                            📄 course_edit_screen.dart
+                            📄 course_management_screen.dart
+                        📄 device_management_screen.dart
+                        📁 enrollments/
+                            📄 create_enrollment_screen.dart
+                            📄 enrollment_management_screen.dart
+                        📁 faculty/
+                            📄 faculty_create_screen.dart
+                            📄 faculty_edit_screen.dart
+                            📄 faculty_management_screen.dart
+                        📁 faculty_course/
+                            📄 create_faculty_course_assignment_screen.dart
+                            📄 faculty_course_management_screen.dart
+                        📁 students/
+                            📄 student_create_screen.dart
+                            📄 student_edit_screen.dart
+                            📄 student_management_screen.dart
+                    📁 providers/
+                        📄 admin_provider.dart
+                📁 attendance/
+                    📁 data/
+                        📄 attendance_api_service.dart
+                        📄 attendance_history_api_service.dart
+                        📄 session_api_service.dart
+                    📁 domain/
+                        📄 attendance_attempt.dart
+                        📄 attendance_history_item.dart
+                        📄 attendance_status.dart
+                        📄 gps_evidence.dart
+                        📄 session.dart
+                        📄 session_status.dart
+                    📁 presentation/
+                        📄 attendance_history_screen.dart
+                        📄 attendance_notifier.dart
+                        📄 attendance_provider.dart
+                        📄 attendance_state.dart
+                        📄 history_notifier.dart
+                        📄 history_provider.dart
+                        📄 history_state.dart
+                        📄 session_notifier.dart
+                        📄 session_provider.dart
+                        📄 session_state.dart
+                    📁 services/
+                        📄 gps_service.dart
+                📁 auth/
+                    📁 data/
+                        📄 auth_api_service.dart
+                        📄 auth_repository_impl.dart
+                        📄 device_binding_api_service.dart
+                        📄 logout_api_service.dart
+                    📁 domain/
+                        📄 auth_repository.dart
+                        📄 login_request.dart
+                        📄 login_response.dart
+                    📁 presentation/
+                        📄 1Q.json
+                        📄 2Q.json
+                        📄 auth_notifier.dart
+                        📄 auth_provider.dart
+                        📄 auth_state.dart
+                        📄 login_screen.dart
+                📁 claims/
+                📁 dashboard/
+                📁 faculty/
+                    📁 data/
+                        📄 course_api_service.dart
+                        📄 faculty_api_service.dart
+                        📄 faculty_repository.dart
+                    📁 models/
+                        📄 attendance_detail.dart
+                        📄 attendance_evidence.dart
+                        📄 classroom.dart
+                        📄 course_detail.dart
+                        📄 course_student.dart
+                        📄 faculty_course.dart
+                        📄 faculty_dashboard.dart
+                        📄 faculty_session.dart
+                        📄 flagged_attendance.dart
+                        📄 session_attendance.dart
+                        📄 student_history.dart
+                    📁 presentation/
+                        📄 attendance_detail_screen.dart
+                        📄 attendance_evidence_screen.dart
+                        📄 course_detail_screen.dart
+                        📄 course_registration_session_screen.dart
+                        📄 faculty_courses_screen.dart
+                        📄 faculty_dashboard_screen.dart
+                        📄 faculty_provider.dart
+                        📄 faculty_sessions_screen.dart
+                        📄 flagged_attendance_screen.dart
+                        📄 session_monitor_screen.dart
+                        📄 start_session_dialog.dart
+                        📄 student_history_screen.dart
+                    📁 providers/
+                        📄 course_provider.dart
+                        📄 faculty_provider.dart
+                📁 home/
+                    📄 home_screen.dart
+                    📄 registration_sessions_screen.dart
+                📁 profile/
+                    📁 data/
+                        📄 device_management_api_service.dart
+                        📄 profile_api_service.dart
+                    📁 domain/
+                        📄 profile_model.dart
+                    📁 presentation/
+                        📄 profile_notifier.dart
+                        📄 profile_provider.dart
+                        📄 profile_screen.dart
+                        📄 profile_state.dart
+                📁 registration/
+                    📁 data/
+                        📄 registration_api_service.dart
+                    📁 models/
+                        📄 registration_session.dart
+            📄 main.dart
+            📁 shared/
+                📁 themes/
+                📁 widgets/
         📁 linux/
         📁 macos/
         📄 mobile_app.iml
         📄 pubspec.lock
         📄 pubspec.yaml
         📁 test/
-            📄 widget_test.dart
         📁 web/
         📁 windows/
     📄 mobileapp_structure.txt
