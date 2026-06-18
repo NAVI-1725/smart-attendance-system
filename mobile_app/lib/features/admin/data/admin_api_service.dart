@@ -21,10 +21,16 @@ class AdminApiService {
     );
   }
 
-  Future<List<dynamic>> getStudents() async {
+  Future<List<dynamic>> getStudents({
+    bool? isActive,
+  }) async {
     final Response response =
         await _apiClient.dio.get(
       '/admin/students',
+      queryParameters: {
+        if (isActive != null)
+          'is_active': isActive,
+      },
     );
 
     return response.data as List<dynamic>;
@@ -92,6 +98,14 @@ class AdminApiService {
   ) async {
     await _apiClient.dio.delete(
       '/admin/students/$studentId',
+    );
+  }
+
+  Future<void> activateStudent(
+    int studentId,
+  ) async {
+    await _apiClient.dio.post(
+      '/admin/students/$studentId/activate',
     );
   }
 

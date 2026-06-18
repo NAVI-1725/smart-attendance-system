@@ -22,9 +22,9 @@ class StudentManagementScreen
 }
 
 class _StudentManagementScreenState
-    extends ConsumerState<
-        StudentManagementScreen> {
+    extends ConsumerState<StudentManagementScreen> {
   String _search = '';
+  bool _showActiveStudents = true;
 
   @override
   void initState() {
@@ -35,7 +35,9 @@ class _StudentManagementScreenState
       (_) {
         ref
             .read(adminProvider)
-            .loadStudents();
+            .loadStudents(
+              isActive: _showActiveStudents,
+            );
       },
     );
   }
@@ -64,6 +66,12 @@ class _StudentManagementScreenState
       final summary = await ref
           .read(adminProvider)
           .importStudents(filePath);
+
+      await ref
+          .read(adminProvider)
+          .loadStudents(
+            isActive: _showActiveStudents,
+          );
 
       if (!mounted) return;
 
@@ -237,6 +245,36 @@ class _StudentManagementScreenState
           'Student Management',
         ),
         actions: [
+          PopupMenuButton<bool>(
+            icon: const Icon(
+              Icons.filter_list,
+            ),
+            onSelected: (value) async {
+              setState(() {
+                _showActiveStudents = value;
+              });
+
+              await ref
+                  .read(adminProvider)
+                  .loadStudents(
+                    isActive: value,
+                  );
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: true,
+                child: Text(
+                  'Active Students',
+                ),
+              ),
+              const PopupMenuItem(
+                value: false,
+                child: Text(
+                  'Deactivated Students',
+                ),
+              ),
+            ],
+          ),
           IconButton(
             onPressed: _showImportFormatDialog,
             icon: const Icon(
@@ -267,7 +305,9 @@ class _StudentManagementScreenState
           if (mounted) {
             await ref
                 .read(adminProvider)
-                .loadStudents();
+                .loadStudents(
+                  isActive: _showActiveStudents,
+                );
           }
         },
         child: const Icon(
@@ -284,7 +324,9 @@ class _StudentManagementScreenState
               onRefresh: () async {
                 await ref
                     .read(adminProvider)
-                    .loadStudents();
+                    .loadStudents(
+                      isActive: _showActiveStudents,
+                    );
               },
               child: provider
                       .students.isEmpty
@@ -320,24 +362,49 @@ class _StudentManagementScreenState
                         index,
                       ) {
                         if (index == 0) {
-                          return TextField(
-                            decoration:
-                                const InputDecoration(
-                              prefixIcon:
-                                  Icon(
-                                Icons.search,
+                          // NOTE: Wrapped the label + search field in a
+                          // Column so the "current view" label can sit
+                          // immediately above the search box, as
+                          // instructed. Original TextField logic is
+                          // unchanged.
+                          return Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 12,
+                                ),
+                                child: Text(
+                                  _showActiveStudents
+                                      ? 'Active Students'
+                                      : 'Deactivated Students',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium,
+                                ),
                               ),
-                              hintText:
-                                  'Search student',
-                            ),
-                            onChanged:
-                                (value) {
-                              setState(() {
-                                _search =
-                                    value
-                                        .toLowerCase();
-                              });
-                            },
+                              TextField(
+                                decoration:
+                                    const InputDecoration(
+                                  prefixIcon:
+                                      Icon(
+                                    Icons.search,
+                                  ),
+                                  hintText:
+                                      'Search student',
+                                ),
+                                onChanged:
+                                    (value) {
+                                  setState(() {
+                                    _search =
+                                        value
+                                            .toLowerCase();
+                                  });
+                                },
+                              ),
+                            ],
                           );
                         }
 
@@ -413,7 +480,9 @@ class _StudentManagementScreenState
                                               .read(
                                                 adminProvider,
                                               )
-                                              .loadStudents();
+                                              .loadStudents(
+                                                isActive: _showActiveStudents,
+                                              );
                                         }
                                       },
                                       icon:
@@ -428,82 +497,161 @@ class _StudentManagementScreenState
                                     const SizedBox(
                                       width: 8,
                                     ),
-                                    TextButton.icon(
-                                      onPressed:
-                                          () async {
-                                        final bool?
-                                            confirmed =
-                                            await showDialog<
-                                                bool>(
-                                          context:
+                                    if (student
+                                        .isActive)
+                                      TextButton.icon(
+                                        onPressed:
+                                            () async {
+                                          final bool? confirmed =
+                                              await showDialog<bool>(
+                                            context: context,
+                                            builder: (
                                               context,
-                                          builder:
-                                              (
-                                            context,
-                                          ) {
-                                            return AlertDialog(
-                                              title:
-                                                  const Text(
-                                                'Delete Student',
-                                              ),
-                                              content:
-                                                  Text(
-                                                'Delete ${student.fullName}?',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed:
-                                                      () {
-                                                    Navigator.pop(
-                                                      context,
-                                                      false,
-                                                    );
-                                                  },
-                                                  child:
-                                                      const Text(
-                                                    'Cancel',
-                                                  ),
+                                            ) {
+                                              return AlertDialog(
+                                                title: const Text(
+                                                  'Deactivate Student',
                                                 ),
-                                                TextButton(
-                                                  onPressed:
-                                                      () {
-                                                    Navigator.pop(
-                                                      context,
-                                                      true,
-                                                    );
-                                                  },
-                                                  child:
-                                                      const Text(
-                                                    'Delete',
-                                                  ),
+                                                content: Text(
+                                                  'Are you sure you want to deactivate ${student.fullName}?\n\nAttendance history will be preserved.',
                                                 ),
-                                              ],
-                                            );
-                                          },
-                                        );
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () {
+                                                      Navigator.pop(
+                                                        context,
+                                                        false,
+                                                      );
+                                                    },
+                                                    child: const Text(
+                                                      'Cancel',
+                                                    ),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () {
+                                                      Navigator.pop(
+                                                        context,
+                                                        true,
+                                                      );
+                                                    },
+                                                    child: const Text(
+                                                      'Deactivate',
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          );
 
-                                        if (confirmed !=
-                                            true) {
-                                          return;
-                                        }
+                                          if (confirmed !=
+                                              true) {
+                                            return;
+                                          }
 
-                                        await ref
-                                            .read(
-                                              adminProvider,
-                                            )
-                                            .deleteStudent(
-                                              student.id,
-                                            );
-                                      },
-                                      icon:
-                                          const Icon(
-                                        Icons.delete,
+                                          await ref
+                                              .read(
+                                                adminProvider,
+                                              )
+                                              .deleteStudent(
+                                                student.id,
+                                              );
+
+                                          if (mounted) {
+                                            await ref
+                                                .read(
+                                                  adminProvider,
+                                                )
+                                                .loadStudents(
+                                                  isActive: _showActiveStudents,
+                                                );
+                                          }
+                                        },
+                                        icon:
+                                            const Icon(
+                                          Icons.person_off,
+                                        ),
+                                        label:
+                                            const Text(
+                                          'Deactivate',
+                                        ),
+                                      )
+                                    else
+                                      TextButton.icon(
+                                        onPressed:
+                                            () async {
+                                          final bool? confirmed =
+                                              await showDialog<bool>(
+                                            context: context,
+                                            builder: (
+                                              context,
+                                            ) {
+                                              return AlertDialog(
+                                                title: const Text(
+                                                  'Activate Student',
+                                                ),
+                                                content: Text(
+                                                  'Are you sure you want to activate ${student.fullName}?',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () {
+                                                      Navigator.pop(
+                                                        context,
+                                                        false,
+                                                      );
+                                                    },
+                                                    child: const Text(
+                                                      'Cancel',
+                                                    ),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () {
+                                                      Navigator.pop(
+                                                        context,
+                                                        true,
+                                                      );
+                                                    },
+                                                    child: const Text(
+                                                      'Activate',
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          );
+
+                                          if (confirmed !=
+                                              true) {
+                                            return;
+                                          }
+
+                                          await ref
+                                              .read(
+                                                adminProvider,
+                                              )
+                                              .activateStudent(
+                                                student.id,
+                                              );
+
+                                          if (mounted) {
+                                            await ref
+                                                .read(
+                                                  adminProvider,
+                                                )
+                                                .loadStudents(
+                                                  isActive: _showActiveStudents,
+                                                );
+                                          }
+                                        },
+                                        icon:
+                                            const Icon(
+                                          Icons.person,
+                                        ),
+                                        label:
+                                            const Text(
+                                          'Activate',
+                                        ),
                                       ),
-                                      label:
-                                          const Text(
-                                        'Delete',
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ],

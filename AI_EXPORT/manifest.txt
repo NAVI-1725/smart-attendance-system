@@ -3,5 +3,5 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  mobile_app/lib/features/admin/models/system_summary.dart
+  mobile_app/lib/features/admin/presentation/students/student_management_screen.dart
 

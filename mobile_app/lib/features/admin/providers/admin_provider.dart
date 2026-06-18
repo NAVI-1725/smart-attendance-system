@@ -52,13 +52,17 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadStudents() async {
+  Future<void> loadStudents({
+    bool? isActive,
+  }) async {
     isLoading = true;
     notifyListeners();
 
     try {
       students =
-          await _repository.getStudents();
+          await _repository.getStudents(
+            isActive: isActive,
+          );
     } finally {
       isLoading = false;
       notifyListeners();
@@ -79,8 +83,6 @@ class AdminProvider extends ChangeNotifier {
         email: email,
         password: password,
       );
-
-      await loadStudents();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -103,8 +105,6 @@ class AdminProvider extends ChangeNotifier {
         email: email,
         isActive: isActive,
       );
-
-      await loadStudents();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -121,8 +121,22 @@ class AdminProvider extends ChangeNotifier {
       await _repository.deleteStudent(
         studentId,
       );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 
-      await loadStudents();
+  Future<void> activateStudent(
+    int studentId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.activateStudent(
+        studentId,
+      );
     } finally {
       isLoading = false;
       notifyListeners();
@@ -144,8 +158,6 @@ class AdminProvider extends ChangeNotifier {
           await _repository.importStudents(
         filePath,
       );
-
-      await loadStudents();
 
       return result;
     } finally {

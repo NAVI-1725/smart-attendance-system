@@ -20,9 +20,13 @@ class AdminRepository {
   }
 
   Future<List<AdminStudent>>
-      getStudents() async {
+      getStudents({
+    bool? isActive,
+  }) async {
     final data =
-        await _apiService.getStudents();
+        await _apiService.getStudents(
+          isActive: isActive,
+        );
 
     return data
         .map(
@@ -84,6 +88,14 @@ class AdminRepository {
     int studentId,
   ) {
     return _apiService.deleteStudent(
+      studentId,
+    );
+  }
+
+  Future<void> activateStudent(
+    int studentId,
+  ) {
+    return _apiService.activateStudent(
       studentId,
     );
   }

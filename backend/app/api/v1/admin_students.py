@@ -232,17 +232,24 @@ def import_students(
     response_model=list[StudentResponse],
 )
 def get_students(
+    is_active: bool | None = None,
     db: Session = Depends(get_db),
 ):
-    students = (
+    query = (
         db.query(User)
         .filter(
-            # Fix 5: Use enum consistently
             User.role == UserRole.STUDENT.value,
         )
-        .order_by(
-            User.id.asc(),
+    )
+
+    if is_active is not None:
+        query = query.filter(
+            User.is_active == is_active,
         )
+
+    students = (
+        query
+        .order_by(User.id.asc())
         .all()
     )
 
@@ -386,4 +393,37 @@ def delete_student(
 
     return {
         "message": "Student deactivated successfully",
+    }
+
+
+@router.post(
+    "/{student_id}/activate",
+    status_code=status.HTTP_200_OK,
+)
+def activate_student(
+    student_id: int,
+    db: Session = Depends(get_db),
+):
+    student = (
+        db.query(User)
+        .filter(
+            User.id == student_id,
+            User.role == UserRole.STUDENT.value,
+        )
+        .first()
+    )
+
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found",
+        )
+
+    student.is_active = True
+
+    db.commit()
+    db.refresh(student)
+
+    return {
+        "message": "Student activated successfully",
     }
