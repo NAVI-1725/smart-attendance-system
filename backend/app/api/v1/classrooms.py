@@ -40,6 +40,22 @@ def create_classroom(
         require_admin_or_faculty,
     ),
 ):
+    existing_classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.name.ilike(
+                data.name.strip()
+            )
+        )
+        .first()
+    )
+
+    if existing_classroom:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Classroom name already exists",
+        )
+
     classroom = Classroom(
         name=data.name.strip(),
         latitude=data.latitude,
@@ -132,6 +148,23 @@ def update_classroom(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Classroom not found",
+        )
+
+    existing_classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id != classroom_id,
+            Classroom.name.ilike(
+                data.name.strip()
+            )
+        )
+        .first()
+    )
+
+    if existing_classroom:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Classroom name already exists",
         )
 
     classroom.name = data.name.strip()

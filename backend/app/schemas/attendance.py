@@ -54,10 +54,12 @@ class AttendanceSubmitResponse(BaseModel):
 
 
 class AttendanceHistoryItem(BaseModel):
+    attendance_id: int
     course_code: str
     course_name: str
     status: str
     timestamp: datetime
+    has_claim: bool
 
 
 class CloseAttendanceResponse(BaseModel):

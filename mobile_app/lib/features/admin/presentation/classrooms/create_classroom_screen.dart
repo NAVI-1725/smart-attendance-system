@@ -161,20 +161,48 @@ class _CreateClassroomScreenState extends ConsumerState<CreateClassroomScreen> {
       return;
     }
 
-    await ref
-        .read(adminProvider)
-        .createClassroom(
-          name: _nameController.text.trim(),
-          latitude: double.parse(_latitudeController.text.trim()),
-          longitude: double.parse(_longitudeController.text.trim()),
-          gpsRadiusMeters: int.parse(_gpsRadiusController.text.trim()),
-        );
+    try {
+      await ref
+          .read(adminProvider)
+          .createClassroom(
+            name: _nameController.text.trim(),
+            latitude: double.parse(
+              _latitudeController.text.trim(),
+            ),
+            longitude: double.parse(
+              _longitudeController.text.trim(),
+            ),
+            gpsRadiusMeters: int.parse(
+              _gpsRadiusController.text.trim(),
+            ),
+          );
 
-    if (!mounted) {
-      return;
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Classroom created successfully',
+          ),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString(),
+          ),
+        ),
+      );
     }
-
-    Navigator.pop(context);
   }
 
   @override

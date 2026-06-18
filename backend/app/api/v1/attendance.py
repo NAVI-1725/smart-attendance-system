@@ -22,6 +22,7 @@ from app.models.attendance_ble_evidence import AttendanceBleEvidence
 from app.models.attendance_gps_evidence import AttendanceGpsEvidence
 from app.models.attendance_ble_nonce import AttendanceBLENonce
 from app.models.course import Course
+from app.models.attendance_claim import AttendanceClaim
 from app.models.enums import (
     AttendanceStatus,
     AttendanceSessionStatus,
@@ -388,15 +389,32 @@ def get_my_attendance_history(
         .all()
     )
 
-    return [
-        AttendanceHistoryItem(
-            course_code=course.course_code,
-            course_name=course.course_name,
-            status=attendance.status.value,
-            timestamp=session.started_at,
+    history_items = []
+
+    for attendance, session, course in records:
+
+        has_claim = (
+            db.query(AttendanceClaim)
+            .filter(
+                AttendanceClaim.attendance_id
+                == attendance.id
+            )
+            .first()
+            is not None
         )
-        for attendance, session, course in records
-    ]
+
+        history_items.append(
+            AttendanceHistoryItem(
+                attendance_id=attendance.id,
+                course_code=course.course_code,
+                course_name=course.course_name,
+                status=attendance.status.value,
+                timestamp=session.started_at,
+                has_claim=has_claim,
+            )
+        )
+
+    return history_items
 
 
 @router.post(

@@ -26,6 +26,42 @@ class FlutterBleService implements BleService {
   BluetoothDevice? _connectedDevice;
 
   Future<void> _ensurePermissions() async {
+    print(
+      'SCAN BEFORE=${await Permission.bluetoothScan.status}',
+    );
+
+    print(
+      'CONNECT BEFORE=${await Permission.bluetoothConnect.status}',
+    );
+
+    print(
+      'LOCATION BEFORE=${await Permission.locationWhenInUse.status}',
+    );
+
+    print(
+      'SCAN PERMANENT=${await Permission.bluetoothScan.isPermanentlyDenied}',
+    );
+
+    print(
+      'CONNECT PERMANENT=${await Permission.bluetoothConnect.isPermanentlyDenied}',
+    );
+
+    print(
+      'LOCATION PERMANENT=${await Permission.locationWhenInUse.isPermanentlyDenied}',
+    );
+
+    print(
+      'SCAN RESTRICTED=${await Permission.bluetoothScan.isRestricted}',
+    );
+
+    print(
+      'CONNECT RESTRICTED=${await Permission.bluetoothConnect.isRestricted}',
+    );
+
+    print(
+      'LOCATION RESTRICTED=${await Permission.locationWhenInUse.isRestricted}',
+    );
+
     final statuses = await [
       Permission.bluetoothScan,
       Permission.bluetoothConnect,
@@ -33,15 +69,15 @@ class FlutterBleService implements BleService {
     ].request();
 
     print(
-      'SCAN=${statuses[Permission.bluetoothScan]}',
+      'SCAN AFTER=${statuses[Permission.bluetoothScan]}',
     );
 
     print(
-      'CONNECT=${statuses[Permission.bluetoothConnect]}',
+      'CONNECT AFTER=${statuses[Permission.bluetoothConnect]}',
     );
 
     print(
-      'LOCATION=${statuses[Permission.locationWhenInUse]}',
+      'LOCATION AFTER=${statuses[Permission.locationWhenInUse]}',
     );
 
     if (statuses[Permission.bluetoothScan] !=

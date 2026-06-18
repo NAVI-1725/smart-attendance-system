@@ -9,6 +9,10 @@ import '../attendance/presentation/attendance_history_screen.dart';
 import '../attendance/presentation/session_provider.dart';
 import '../attendance/presentation/attendance_provider.dart';
 import '../attendance/domain/attendance_status.dart';
+import '../claims/data/claims_api_service.dart';
+import '../claims/domain/claim_status.dart';
+import '../claims/presentation/my_claims_screen.dart';
+import '../../core/services/api_client.dart';
 import '../profile/presentation/profile_screen.dart';
 import '../faculty/presentation/faculty_dashboard_screen.dart';
 import 'registration_sessions_screen.dart';
@@ -23,6 +27,29 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState
     extends ConsumerState<HomeScreen> {
+  final ClaimsApiService _claimsApiService =
+      ClaimsApiService(
+        ApiClient(),
+      );
+
+  int _claimNotificationCount = 0;
+
+  Future<void> _loadClaimNotifications() async {
+    try {
+      final count =
+          await _claimsApiService
+              .getResolvedClaimsCount();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _claimNotificationCount = count;
+      });
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,12 +69,14 @@ class _HomeScreenState
       },
     );
 
-    Future.microtask(() {
+    Future.microtask(() async {
       ref
           .read(
             sessionNotifierProvider.notifier,
           )
           .fetchActiveSessions();
+
+      await _loadClaimNotifications();
     });
   }
 
@@ -219,6 +248,29 @@ class _HomeScreenState
                               MaterialPageRoute(
                                 builder: (_) =>
                                     const AttendanceHistoryScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.gavel),
+                          label: Text(
+                            _claimNotificationCount > 0
+                                ? 'My Claims ($_claimNotificationCount)'
+                                : 'My Claims',
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const MyClaimsScreen(),
                               ),
                             );
                           },

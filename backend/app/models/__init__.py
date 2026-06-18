@@ -1,4 +1,5 @@
 # backend/app/models/__init__.py
+
 from app.models.user import User as User
 from app.models.device import Device as Device
 from app.models.attendance import AttendanceAttempt as AttendanceAttempt
@@ -22,4 +23,7 @@ from app.models.course_registration_session import (
 )
 from app.models.course_registration_request import (
     CourseRegistrationRequest,
+)
+from app.models.attendance_claim import (
+    AttendanceClaim,
 )

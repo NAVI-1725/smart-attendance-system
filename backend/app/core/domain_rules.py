@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.models.enrollment import Enrollment
 from app.models.attendance import AttendanceAttempt
 from app.models.attendance_session import AttendanceSession
+from app.models.attendance_claim import AttendanceClaim
 from app.models.faculty_course import FacultyCourse
 from app.models.course_registration_session import (
     CourseRegistrationSession,
@@ -118,6 +119,36 @@ def ensure_faculty_owns_session(
     return session
 
 
+def ensure_student_owns_attendance(
+    db: Session,
+    student_id: int,
+    attendance_id: int,
+):
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance not found",
+            status_code=404,
+        )
+
+    if attendance.student_id != student_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Student does not own attendance",
+            status_code=403,
+        )
+
+    return attendance
+
+
 def ensure_faculty_owns_attendance(
     db: Session,
     faculty_id: int,
@@ -156,6 +187,66 @@ def ensure_faculty_owns_attendance(
     return attendance
 
 
+def ensure_faculty_owns_claim(
+    db: Session,
+    faculty_id: int,
+    claim_id: int,
+):
+    claim = (
+        db.query(AttendanceClaim)
+        .filter(
+            AttendanceClaim.id == claim_id,
+        )
+        .first()
+    )
+
+    if not claim:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Claim not found",
+            status_code=404,
+        )
+
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == claim.attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance not found",
+            status_code=404,
+        )
+
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == attendance.session_id,
+        )
+        .first()
+    )
+
+    if not session:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Session not found",
+            status_code=404,
+        )
+
+    if session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own claim",
+            status_code=403,
+        )
+
+    return claim
+
+
 def ensure_faculty_owns_registration_session(
     db: Session,
     faculty_id: int,
@@ -184,6 +275,7 @@ def ensure_faculty_owns_registration_session(
         )
 
     return registration_session
+
 
 ################################################################################
 # END FILE: backend/app/core/domain_rules.py

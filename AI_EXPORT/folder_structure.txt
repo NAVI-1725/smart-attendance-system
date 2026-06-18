@@ -4,7 +4,13 @@ FOLDER STRUCTURE
 └── mobile_app
     └── lib
         └── features
-            └── admin
+            ├── claims
+                ├── data
+                    └── claims_api_service.dart
+                ├── domain
+                    ├── claim.dart
+                    └── claim_status.dart
                 └── presentation
-                    └── students
-                        └── student_management_screen.dart
+                    └── my_claims_screen.dart
+            └── home
+                └── home_screen.dart

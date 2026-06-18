@@ -27,6 +27,9 @@ class ErrorCode(str, Enum):
     DEVICE_NOT_TRUSTED = "DEVICE_NOT_TRUSTED"
     DEVICE_BINDING_CONFLICT = "DEVICE_BINDING_CONFLICT"
 
+    CLAIM_ALREADY_EXISTS = "CLAIM_ALREADY_EXISTS"
+    INVALID_CLAIM_STATE = "INVALID_CLAIM_STATE"
+
 
 class ApiError(HTTPException):
     def __init__(self, code: ErrorCode, message: str, status_code: int = 400):

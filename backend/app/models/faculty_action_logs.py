@@ -1,4 +1,5 @@
 # backend\app\models\faculty_action_logs.py
+
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.sql import func
 from app.db.base_class import Base
@@ -19,6 +20,11 @@ class FacultyActionLog(Base):
         Integer,
         ForeignKey("attendance.id", ondelete="RESTRICT"),
         nullable=False,
+    )
+
+    claim_id = Column(
+        Integer,
+        nullable=True,
     )
 
     original_status = Column(String(20), nullable=False)

@@ -9,9 +9,14 @@ from sqlalchemy import func
 from app.core.dependencies import get_current_user, get_db, require_faculty
 from app.core.domain_rules import (
     ensure_faculty_owns_attendance,
+    ensure_faculty_owns_claim,
 )
 from app.models.attendance import AttendanceAttempt
-from app.models.enums import AttendanceStatus
+from app.models.attendance_claim import AttendanceClaim
+from app.models.enums import (
+    AttendanceStatus,
+    ClaimStatus,
+)
 from app.models.faculty_action_logs import FacultyActionLog
 from app.models.attendance_session import AttendanceSession
 from app.models.user import User
@@ -33,6 +38,11 @@ from app.schemas.faculty import (
     StudentHistoryItem,
 )
 from app.schemas.faculty_resolution import FacultyResolutionRequest
+from app.schemas.claim import (
+    ClaimResponse,
+    ClaimDetailResponse,
+    ClaimResolutionRequest,
+)
 from app.services.session_cleanup_service import (
     deactivate_expired_sessions,
 )
@@ -274,18 +284,12 @@ def resolve_attendance(
             detail="Faculty access required",
         )
 
-    # 2️⃣ Attendance existence (CORRECT ORM MODEL)
-    attendance = (
-        db.query(AttendanceAttempt)
-        .filter(AttendanceAttempt.id == data.attendance_id)
-        .first()
+    # 2️⃣ Attendance ownership validation
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=data.attendance_id,
     )
-
-    if not attendance:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Attendance not found",
-        )
 
     # 4️⃣ Idempotent review enforcement
     if attendance.status in (
@@ -325,8 +329,13 @@ def resolve_attendance(
         reason=data.reason,
     )
 
-    db.add(log)
-    db.commit()
+    try:
+        db.add(log)
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
 
     return {"status": "resolved"}
 
@@ -392,7 +401,7 @@ def get_attendance_detail(
         ),
         "course_name": (
             session.course.course_name
-            if session
+            if session and session.course
             else ""
         ),
         "reviewed_by": reviewed_by_name,
@@ -661,6 +670,228 @@ def get_flagged_attendance(
             started_at,
         ) in flagged_records
     ]
+
+
+@router.get(
+    "/claims",
+    response_model=list[ClaimResponse],
+)
+def get_faculty_claims(
+    status_filter: ClaimStatus | None = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claims_query = (
+        db.query(AttendanceClaim)
+        .join(
+            AttendanceAttempt,
+            AttendanceClaim.attendance_id
+            == AttendanceAttempt.id,
+        )
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id
+            == current_user.id,
+        )
+    )
+
+    if status_filter is not None:
+        claims_query = claims_query.filter(
+            AttendanceClaim.status
+            == status_filter,
+        )
+
+    return (
+        claims_query
+        .order_by(
+            AttendanceClaim.id.desc(),
+        )
+        .all()
+    )
+
+
+@router.get(
+    "/claims/{claim_id}",
+    response_model=ClaimDetailResponse,
+)
+def get_faculty_claim_detail(
+    claim_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claim = ensure_faculty_owns_claim(
+        db=db,
+        faculty_id=current_user.id,
+        claim_id=claim_id,
+    )
+
+    return claim
+
+
+@router.post(
+    "/claims/{claim_id}/approve",
+)
+def approve_claim(
+    claim_id: int,
+    data: ClaimResolutionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claim = ensure_faculty_owns_claim(
+        db=db,
+        faculty_id=current_user.id,
+        claim_id=claim_id,
+    )
+
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == claim.attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attendance not found",
+        )
+
+    if claim.status != ClaimStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Claim already resolved",
+        )
+
+    if attendance.status != AttendanceStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attendance is not in rejected state",
+        )
+
+    try:
+        claim.status = ClaimStatus.APPROVED
+
+        claim.claim_resolved_by = current_user.id
+
+        claim.claim_resolved_at = datetime.now(
+            timezone.utc,
+        )
+
+        claim.claim_resolution_reason = (
+            data.resolution_reason
+        )
+
+        attendance.status = AttendanceStatus.CONFIRMED
+
+        attendance.reviewed_by = current_user.id
+
+        attendance.reviewed_at = datetime.now(
+            timezone.utc,
+        )
+
+        attendance.resolution_reason = (
+            data.resolution_reason
+        )
+
+        log = FacultyActionLog(
+            faculty_id=current_user.id,
+            attendance_id=attendance.id,
+            claim_id=claim.id,
+            original_status=AttendanceStatus.REJECTED.value,
+            new_status=AttendanceStatus.CONFIRMED.value,
+            resolution_type="CLAIM_APPROVED",
+            reason=data.resolution_reason,
+        )
+
+        db.add(log)
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"status": "approved"}
+
+
+@router.post(
+    "/claims/{claim_id}/reject",
+)
+def reject_claim(
+    claim_id: int,
+    data: ClaimResolutionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claim = ensure_faculty_owns_claim(
+        db=db,
+        faculty_id=current_user.id,
+        claim_id=claim_id,
+    )
+
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == claim.attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attendance not found",
+        )
+
+    if claim.status != ClaimStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Claim already resolved",
+        )
+
+    if attendance.status != AttendanceStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attendance is not in rejected state",
+        )
+
+    try:
+        claim.status = ClaimStatus.REJECTED
+
+        claim.claim_resolved_by = current_user.id
+
+        claim.claim_resolved_at = datetime.now(
+            timezone.utc,
+        )
+
+        claim.claim_resolution_reason = (
+            data.resolution_reason
+        )
+
+        log = FacultyActionLog(
+            faculty_id=current_user.id,
+            attendance_id=attendance.id,
+            claim_id=claim.id,
+            original_status=AttendanceStatus.REJECTED.value,
+            new_status=AttendanceStatus.REJECTED.value,
+            resolution_type="CLAIM_REJECTED",
+            reason=data.resolution_reason,
+        )
+
+        db.add(log)
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"status": "rejected"}
 
 
 @router.get(

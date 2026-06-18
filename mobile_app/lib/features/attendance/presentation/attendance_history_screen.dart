@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../claims/presentation/claim_submission_dialog.dart';
 import 'history_provider.dart';
 
 class AttendanceHistoryScreen
@@ -85,17 +86,24 @@ class _AttendanceHistoryScreenState
                   horizontal: 12,
                   vertical: 6,
                 ),
-                child: ListTile(
-                  title: Text(
-                    '${record.courseCode} - ${record.courseName}',
-                  ),
-                  subtitle: Column(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.all(12),
+                  child: Column(
                     crossAxisAlignment:
                         CrossAxisAlignment
                             .start,
-                    mainAxisSize:
-                        MainAxisSize.min,
                     children: [
+                      Text(
+                        '${record.courseCode} - ${record.courseName}',
+                        style:
+                            Theme.of(context)
+                                .textTheme
+                                .titleMedium,
+                      ),
+                      const SizedBox(
+                        height: 8,
+                      ),
                       Text(
                         'Status: ${record.status}',
                       ),
@@ -104,6 +112,55 @@ class _AttendanceHistoryScreenState
                             .toLocal()
                             .toString(),
                       ),
+                      if (record.status
+                                  .toUpperCase() ==
+                              'REJECTED' &&
+                          !record.hasClaim) ...[
+                        const SizedBox(
+                          height: 12,
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final submitted =
+                                await showDialog<bool>(
+                              context:
+                                  context,
+                              builder:
+                                  (
+                                    context,
+                                  ) =>
+                                      ClaimSubmissionDialog(
+                                        attendanceId:
+                                            record
+                                                .attendanceId,
+                                      ),
+                            );
+
+                            if (submitted ==
+                                true) {
+                              ref
+                                  .read(
+                                    historyNotifierProvider
+                                        .notifier,
+                                  )
+                                  .loadHistory();
+                            }
+                          },
+                          child: const Text(
+                            'Submit Claim',
+                          ),
+                        ),
+                      ],
+                      if (record.hasClaim) ...[
+                        const SizedBox(
+                          height: 12,
+                        ),
+                        const Chip(
+                          label: Text(
+                            'Claim Submitted',
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

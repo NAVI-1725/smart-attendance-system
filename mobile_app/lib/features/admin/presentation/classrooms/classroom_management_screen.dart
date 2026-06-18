@@ -123,16 +123,30 @@ class _ClassroomManagementScreenState
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
+          final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const CreateClassroomScreen()),
+            MaterialPageRoute(
+              builder: (_) => const CreateClassroomScreen(),
+            ),
           );
 
           if (!mounted) {
             return;
           }
 
-          await ref.read(adminProvider).loadClassrooms();
+          if (result == true) {
+            await ref
+                .read(adminProvider)
+                .loadClassrooms();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Classroom created successfully',
+                ),
+              ),
+            );
+          }
         },
         child: const Icon(Icons.add),
       ),
