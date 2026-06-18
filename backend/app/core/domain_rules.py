@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.models.enrollment import Enrollment
 from app.models.attendance import AttendanceAttempt
 from app.models.attendance_session import AttendanceSession
-from app.models.classroom import Classroom
 from app.models.faculty_course import FacultyCourse
 from app.models.course_registration_session import (
     CourseRegistrationSession,
@@ -67,26 +66,6 @@ def ensure_class_active(
         )
 
     return session
-
-
-def ensure_faculty_owns_classroom(
-    db: Session,
-    faculty_id: int,
-    classroom_id: int,
-):
-    if (
-        not db.query(Classroom)
-        .filter(
-            Classroom.id == classroom_id,
-            Classroom.faculty_id == faculty_id,
-        )
-        .first()
-    ):
-        raise ApiError(
-            ErrorCode.CLASSROOM_NOT_FOUND,
-            "Classroom not found",
-            status_code=404,
-        )
 
 
 def ensure_faculty_teaches_course(

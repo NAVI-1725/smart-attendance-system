@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session as DBSession
 from app.db.session import get_db
 from app.core.auth import get_current_user
 from app.core.domain_rules import (
-    ensure_faculty_owns_classroom,
     ensure_faculty_teaches_course,
     ensure_faculty_owns_session,
 )
@@ -52,12 +51,6 @@ def start_session(
             "Only faculty can start sessions",
             status_code=403,
         )
-
-    ensure_faculty_owns_classroom(
-        db,
-        current_user.id,
-        request.classroom_id,
-    )
 
     ensure_faculty_teaches_course(
         db,
@@ -280,3 +273,7 @@ def get_my_active_sessions(
         db=db,
         student_id=current_user.id,
     )
+
+################################################################################
+# END FILE: backend/app/api/v1/sessions.py
+################################################################################

@@ -12,7 +12,6 @@ from app.core.auth import get_current_user
 from app.core.dependencies import require_faculty
 from app.core.domain_rules import (
     ensure_student_enrolled_in_course,
-    ensure_faculty_owns_classroom,
 )
 from app.core.errors import ApiError, ErrorCode
 from app.core.constants.roles import UserRole
@@ -336,7 +335,6 @@ def get_classroom_attendance(
     db: DBSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    ensure_faculty_owns_classroom(db, current_user.id, classroom_id)
 
     records = (
         db.query(AttendanceAttempt, User.full_name, User.email)
@@ -412,8 +410,6 @@ def close_attendance(
     current_user: User = Depends(get_current_user),
 ):
 
-    ensure_faculty_owns_classroom(db, current_user.id, classroom_id)
-
     deactivate_expired_sessions(db)
 
     now = datetime.now(timezone.utc)
@@ -476,12 +472,6 @@ def get_attendance_evidence(
             "Attendance record not found",
             status_code=404,
         )
-
-    ensure_faculty_owns_classroom(
-        db,
-        current_user.id,
-        attendance.classroom_id,
-    )
 
     ble_evidence = (
         db.query(AttendanceBleEvidence)

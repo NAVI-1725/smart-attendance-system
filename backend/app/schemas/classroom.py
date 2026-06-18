@@ -1,4 +1,4 @@
-# backend\app\schemas\classroom.py
+# backend/app/schemas/classroom.py
 
 from pydantic import BaseModel
 
@@ -20,7 +20,6 @@ class ClassroomUpdate(BaseModel):
 class ClassroomResponse(BaseModel):
     id: int
     name: str
-    faculty_id: int
     latitude: float
     longitude: float
     gps_radius_meters: int

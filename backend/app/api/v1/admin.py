@@ -1,12 +1,20 @@
 # backend\app\api\v1\admin.py
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from sqlalchemy import func
 
 from app.core.dependencies import require_admin
 from app.db.session import get_db
 
 from app.models.user import User
+from app.models.course import Course
+from app.models.classroom import Classroom
+from app.models.device import Device
+from app.models.enrollment import Enrollment
+from app.models.faculty_course import FacultyCourse
+from app.models.trusted_ble_beacon import TrustedBLEBeacon
 
 from app.schemas.device import (
     DeviceUnbindRequest,
@@ -27,6 +35,64 @@ router = APIRouter(
 @router.get("/ping")
 def admin_ping():
     return {"status": "admin ok"}
+
+
+@router.get("/system-summary")
+def get_system_summary(
+    db: Session = Depends(get_db),
+):
+    student_count = (
+        db.query(User)
+        .filter(User.role == "student")
+        .count()
+    )
+
+    faculty_count = (
+        db.query(User)
+        .filter(User.role == "faculty")
+        .count()
+    )
+
+    course_count = (
+        db.query(Course)
+        .count()
+    )
+
+    enrollment_count = (
+        db.query(Enrollment)
+        .count()
+    )
+
+    classroom_count = (
+        db.query(Classroom)
+        .count()
+    )
+
+    beacon_count = (
+        db.query(TrustedBLEBeacon)
+        .count()
+    )
+
+    device_count = (
+        db.query(Device)
+        .count()
+    )
+
+    faculty_course_count = (
+        db.query(FacultyCourse)
+        .count()
+    )
+
+    return {
+        "students": student_count,
+        "faculty": faculty_count,
+        "courses": course_count,
+        "faculty_courses": faculty_course_count,
+        "enrollments": enrollment_count,
+        "classrooms": classroom_count,
+        "beacons": beacon_count,
+        "devices": device_count,
+    }
 
 
 @router.get(

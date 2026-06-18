@@ -37,12 +37,11 @@ def create_classroom(
     data: ClassroomCreate,
     db: Session = Depends(get_db),
     current_user=Depends(
-        require_faculty,
+        require_admin_or_faculty,
     ),
 ):
     classroom = Classroom(
         name=data.name.strip(),
-        faculty_id=current_user.id,
         latitude=data.latitude,
         longitude=data.longitude,
         gps_radius_meters=data.gps_radius_meters,
@@ -92,23 +91,13 @@ def get_classroom(
         require_admin_or_faculty,
     ),
 ):
-    if current_user.role == "admin":
-        classroom = (
-            db.query(Classroom)
-            .filter(
-                Classroom.id == classroom_id,
-            )
-            .first()
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
         )
-    else:
-        classroom = (
-            db.query(Classroom)
-            .filter(
-                Classroom.id == classroom_id,
-                Classroom.faculty_id == current_user.id,
-            )
-            .first()
-        )
+        .first()
+    )
 
     if not classroom:
         raise HTTPException(
@@ -131,23 +120,13 @@ def update_classroom(
         require_admin_or_faculty,
     ),
 ):
-    if current_user.role == "admin":
-        classroom = (
-            db.query(Classroom)
-            .filter(
-                Classroom.id == classroom_id,
-            )
-            .first()
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
         )
-    else:
-        classroom = (
-            db.query(Classroom)
-            .filter(
-                Classroom.id == classroom_id,
-                Classroom.faculty_id == current_user.id,
-            )
-            .first()
-        )
+        .first()
+    )
 
     if not classroom:
         raise HTTPException(
@@ -177,23 +156,13 @@ def delete_classroom(
         require_admin_or_faculty,
     ),
 ):
-    if current_user.role == "admin":
-        classroom = (
-            db.query(Classroom)
-            .filter(
-                Classroom.id == classroom_id,
-            )
-            .first()
+    classroom = (
+        db.query(Classroom)
+        .filter(
+            Classroom.id == classroom_id,
         )
-    else:
-        classroom = (
-            db.query(Classroom)
-            .filter(
-                Classroom.id == classroom_id,
-                Classroom.faculty_id == current_user.id,
-            )
-            .first()
-        )
+        .first()
+    )
 
     if not classroom:
         raise HTTPException(

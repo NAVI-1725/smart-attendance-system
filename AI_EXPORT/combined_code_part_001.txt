@@ -1,0 +1,146 @@
+################################################################################
+FILE: mobile_app/lib/features/admin/models/system_summary.dart
+################################################################################
+
+// mobile_app/lib/features/admin/models/system_summary.dart
+
+class SystemSummary {
+  final int students;
+  final int faculty;
+  final int courses;
+  final int enrollments;
+  final int classrooms;
+  final int beacons;
+  final int devicesBound;
+
+  const SystemSummary({
+    required this.students,
+    required this.faculty,
+    required this.courses,
+    required this.enrollments,
+    required this.classrooms,
+    required this.beacons,
+    required this.devicesBound,
+  });
+
+  factory SystemSummary.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    int parseInt(dynamic value) {
+      if (value is int) {
+        return value;
+      }
+
+      if (value is num) {
+        return value.toInt();
+      }
+
+      if (value is String) {
+        return int.tryParse(value) ?? 0;
+      }
+
+      return 0;
+    }
+
+    return SystemSummary(
+      students: parseInt(
+        json['students'],
+      ),
+      faculty: parseInt(
+        json['faculty'],
+      ),
+      courses: parseInt(
+        json['courses'],
+      ),
+      enrollments: parseInt(
+        json['enrollments'],
+      ),
+      classrooms: parseInt(
+        json['classrooms'],
+      ),
+      beacons: parseInt(
+        json['beacons'],
+      ),
+      devicesBound: parseInt(
+        json['devices_bound'],
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'students': students,
+      'faculty': faculty,
+      'courses': courses,
+      'enrollments': enrollments,
+      'classrooms': classrooms,
+      'beacons': beacons,
+      'devices_bound': devicesBound,
+    };
+  }
+
+  SystemSummary copyWith({
+    int? students,
+    int? faculty,
+    int? courses,
+    int? enrollments,
+    int? classrooms,
+    int? beacons,
+    int? devicesBound,
+  }) {
+    return SystemSummary(
+      students: students ?? this.students,
+      faculty: faculty ?? this.faculty,
+      courses: courses ?? this.courses,
+      enrollments: enrollments ?? this.enrollments,
+      classrooms: classrooms ?? this.classrooms,
+      beacons: beacons ?? this.beacons,
+      devicesBound:
+          devicesBound ?? this.devicesBound,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'SystemSummary('
+        'students: $students, '
+        'faculty: $faculty, '
+        'courses: $courses, '
+        'enrollments: $enrollments, '
+        'classrooms: $classrooms, '
+        'beacons: $beacons, '
+        'devicesBound: $devicesBound'
+        ')';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is SystemSummary &&
+            students == other.students &&
+            faculty == other.faculty &&
+            courses == other.courses &&
+            enrollments == other.enrollments &&
+            classrooms == other.classrooms &&
+            beacons == other.beacons &&
+            devicesBound == other.devicesBound;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      students,
+      faculty,
+      courses,
+      enrollments,
+      classrooms,
+      beacons,
+      devicesBound,
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/admin/models/system_summary.dart
+################################################################################
+

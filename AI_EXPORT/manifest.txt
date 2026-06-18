@@ -1,0 +1,7 @@
+AI CODE EXPORT MANIFEST
+============================================================
+
+Part 001
+----------------------------------------
+  mobile_app/lib/features/admin/models/system_summary.dart
+

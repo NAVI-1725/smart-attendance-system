@@ -9,7 +9,6 @@ from sqlalchemy import func
 from app.core.dependencies import get_current_user, get_db, require_faculty
 from app.core.domain_rules import (
     ensure_faculty_owns_attendance,
-    ensure_faculty_owns_classroom,
 )
 from app.models.attendance import AttendanceAttempt
 from app.models.enums import AttendanceStatus
@@ -287,13 +286,6 @@ def resolve_attendance(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Attendance not found",
         )
-
-    # 3️⃣ Faculty must own classroom
-    ensure_faculty_owns_classroom(
-        db,
-        current_user.id,
-        attendance.classroom_id,
-    )
 
     # 4️⃣ Idempotent review enforcement
     if attendance.status in (
@@ -579,12 +571,6 @@ def get_attendance_summary(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    ensure_faculty_owns_classroom(
-        db,
-        current_user.id,
-        classroom_id,
-    )
-
     confirmed = (
         db.query(func.count(AttendanceAttempt.id))
         .filter(
@@ -628,12 +614,6 @@ def get_flagged_attendance(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    ensure_faculty_owns_classroom(
-        db,
-        current_user.id,
-        classroom_id,
-    )
-
     flagged_records = (
         db.query(
             AttendanceAttempt,

@@ -21,6 +21,8 @@ from app.core.dependencies import require_admin
 from app.core.security import get_password_hash
 from app.db.session import get_db
 from app.models.user import User
+from app.models.device import Device
+from app.models.auth_session import AuthSession
 from app.schemas.admin_student import (
     StudentCreate,
     StudentUpdate,
@@ -338,7 +340,6 @@ def delete_student(
         db.query(User)
         .filter(
             User.id == student_id,
-            # Fix 5: Use enum consistently
             User.role == UserRole.STUDENT.value,
         )
         .first()
@@ -350,9 +351,39 @@ def delete_student(
             detail="Student not found",
         )
 
-    db.delete(student)
+    device_ids = [
+        device.id
+        for device in db.query(Device)
+        .filter(
+            Device.user_id == student.id,
+        )
+        .all()
+    ]
+
+    db.query(AuthSession).filter(
+        AuthSession.user_id == student.id,
+    ).delete(
+        synchronize_session=False,
+    )
+
+    if device_ids:
+        db.query(AuthSession).filter(
+            AuthSession.device_id.in_(device_ids),
+        ).delete(
+            synchronize_session=False,
+        )
+
+    db.query(Device).filter(
+        Device.user_id == student.id,
+    ).delete(
+        synchronize_session=False,
+    )
+
+    student.is_active = False
+
     db.commit()
+    db.refresh(student)
 
     return {
-        "message": "Student deleted successfully",
+        "message": "Student deactivated successfully",
     }

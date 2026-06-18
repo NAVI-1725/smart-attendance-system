@@ -4,7 +4,6 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
-    ForeignKey,
     DateTime,
     CheckConstraint,
     Numeric,
@@ -36,12 +35,6 @@ class Classroom(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     name = Column(String, nullable=False)
-
-    faculty_id = Column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
 
     latitude = Column(
         Numeric(10, 7),
