@@ -62,3 +62,11 @@ class CourseRegistrationSession(Base):
         "User",
         back_populates="registration_sessions",
     )
+
+    requests = relationship(
+        "CourseRegistrationRequest",
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+
+    

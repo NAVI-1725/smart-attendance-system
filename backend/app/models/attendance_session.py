@@ -96,4 +96,5 @@ class AttendanceSession(Base):
 
     classroom = relationship(
         "Classroom",
+        back_populates="attendance_sessions",
     )

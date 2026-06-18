@@ -67,9 +67,11 @@ class Course(Base):
     attendance_sessions = relationship(
         "AttendanceSession",
         back_populates="course",
+        cascade="all, delete-orphan",
     )
 
     registration_sessions = relationship(
         "CourseRegistrationSession",
         back_populates="course",
+        cascade="all, delete-orphan",
     )

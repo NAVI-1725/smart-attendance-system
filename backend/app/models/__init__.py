@@ -20,3 +20,6 @@ from app.models.faculty_course import FacultyCourse
 from app.models.course_registration_session import (
     CourseRegistrationSession,
 )
+from app.models.course_registration_request import (
+    CourseRegistrationRequest,
+)

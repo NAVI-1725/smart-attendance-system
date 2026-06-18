@@ -10,11 +10,11 @@ class CreateClassroomScreen extends ConsumerStatefulWidget {
   const CreateClassroomScreen({super.key});
 
   @override
-  ConsumerState<CreateClassroomScreen> createState() => _CreateClassroomScreenState();
+  ConsumerState<CreateClassroomScreen> createState() =>
+      _CreateClassroomScreenState();
 }
 
-class _CreateClassroomScreenState
-    extends ConsumerState<CreateClassroomScreen> {
+class _CreateClassroomScreenState extends ConsumerState<CreateClassroomScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nameController = TextEditingController();
@@ -44,8 +44,9 @@ class _CreateClassroomScreenState
     });
 
     try {
-      bool serviceEnabled =
-          await Geolocator.isLocationServiceEnabled();
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      print('LOCATION SERVICE ENABLED: $serviceEnabled');
 
       if (!serviceEnabled) {
         if (!mounted) {
@@ -53,11 +54,7 @@ class _CreateClassroomScreenState
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Location service is disabled',
-            ),
-          ),
+          const SnackBar(content: Text('Location service is disabled')),
         );
 
         return;
@@ -66,12 +63,24 @@ class _CreateClassroomScreenState
       LocationPermission permission =
           await Geolocator.checkPermission();
 
+      print('INITIAL PERMISSION: $permission');
+
+      print(
+        'SERVICE STATUS: '
+        '${await Geolocator.isLocationServiceEnabled()}',
+      );
+
+      print(
+        'APP CAN REQUEST LOCATION',
+      );
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+
+        print('AFTER REQUEST PERMISSION: $permission');
       }
 
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.denied) {
         if (!mounted) {
           return;
         }
@@ -87,39 +96,57 @@ class _CreateClassroomScreenState
         return;
       }
 
+      if (permission == LocationPermission.deniedForever) {
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Location permission permanently denied. Open Settings and enable Location.',
+            ),
+          ),
+        );
+
+        await Geolocator.openAppSettings();
+
+        return;
+      }
+
+      print('ATTEMPTING LOCATION FETCH');
+
+      print(
+        'PERMISSION BEFORE FETCH: $permission',
+      );
+
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      _latitudeController.text =
-          position.latitude.toString();
+      print('LAT=${position.latitude}');
 
-      _longitudeController.text =
-          position.longitude.toString();
+      print('LON=${position.longitude}');
+
+      _latitudeController.text = position.latitude.toString();
+
+      _longitudeController.text = position.longitude.toString();
 
       if (!mounted) {
         return;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Location captured successfully',
-          ),
-        ),
+        const SnackBar(content: Text('Location captured successfully')),
       );
     } catch (e) {
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Unable to get location: $e',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to get location: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -134,12 +161,14 @@ class _CreateClassroomScreenState
       return;
     }
 
-    await ref.read(adminProvider).createClassroom(
-      name: _nameController.text.trim(),
-      latitude: double.parse(_latitudeController.text.trim()),
-      longitude: double.parse(_longitudeController.text.trim()),
-      gpsRadiusMeters: int.parse(_gpsRadiusController.text.trim()),
-    );
+    await ref
+        .read(adminProvider)
+        .createClassroom(
+          name: _nameController.text.trim(),
+          latitude: double.parse(_latitudeController.text.trim()),
+          longitude: double.parse(_longitudeController.text.trim()),
+          gpsRadiusMeters: int.parse(_gpsRadiusController.text.trim()),
+        );
 
     if (!mounted) {
       return;
@@ -197,23 +226,6 @@ class _CreateClassroomScreenState
               },
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _isGettingLocation ? null : _fillCurrentLocation,
-              // A4: spinner while fetching location
-              icon: _isGettingLocation
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.my_location),
-              label: const Text(
-                'Use Current Location',
-              ),
-            ),
-            const SizedBox(height: 16),
             TextFormField(
               controller: _longitudeController,
               decoration: const InputDecoration(labelText: 'Longitude'),
@@ -238,6 +250,19 @@ class _CreateClassroomScreenState
 
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _isGettingLocation ? null : _fillCurrentLocation,
+              // A4: spinner while fetching location
+              icon: _isGettingLocation
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location),
+              label: const Text('Use Current Location'),
             ),
             const SizedBox(height: 16),
             TextFormField(

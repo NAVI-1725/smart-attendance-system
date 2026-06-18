@@ -1,4 +1,4 @@
-# backend\app\models\classroom.py
+# backend/app/models/classroom.py
 
 from sqlalchemy import (
     Column,
@@ -10,6 +10,7 @@ from sqlalchemy import (
     Numeric,
 )
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
 
@@ -60,4 +61,16 @@ class Classroom(Base):
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
+    )
+
+    attendance_sessions = relationship(
+        "AttendanceSession",
+        back_populates="classroom",
+        cascade="all, delete-orphan",
+    )
+
+    trusted_ble_beacons = relationship(
+        "TrustedBLEBeacon",
+        back_populates="classroom",
+        cascade="all, delete-orphan",
     )

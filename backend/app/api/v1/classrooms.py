@@ -74,9 +74,6 @@ def get_classrooms(
     else:
         classrooms = (
             db.query(Classroom)
-            .filter(
-                Classroom.faculty_id == current_user.id,
-            )
             .order_by(Classroom.id.asc())
             .all()
         )

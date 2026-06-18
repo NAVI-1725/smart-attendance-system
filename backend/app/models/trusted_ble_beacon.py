@@ -1,4 +1,5 @@
-# backend\app\models\trusted_ble_beacon.py
+# backend/app/models/trusted_ble_beacon.py
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -8,6 +9,7 @@ from sqlalchemy import (
     DateTime,
 )
 
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -46,4 +48,15 @@ class TrustedBLEBeacon(Base):
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
+    )
+
+    classroom = relationship(
+        "Classroom",
+        back_populates="trusted_ble_beacons",
+    )
+
+    beacon_secrets = relationship(
+        "BeaconSecret",
+        back_populates="beacon",
+        cascade="all, delete-orphan",
     )

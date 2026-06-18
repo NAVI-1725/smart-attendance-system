@@ -11,8 +11,13 @@ from app.models.attendance import AttendanceAttempt
 from app.models.attendance_session import AttendanceSession
 from app.models.classroom import Classroom
 from app.models.faculty_course import FacultyCourse
+from app.models.course_registration_session import (
+    CourseRegistrationSession,
+)
 from app.core.errors import ApiError, ErrorCode
-from app.services.session_cleanup_service import deactivate_expired_sessions
+from app.services.session_cleanup_service import (
+    deactivate_expired_sessions,
+)
 
 
 def ensure_student_enrolled_in_course(
@@ -35,7 +40,10 @@ def ensure_student_enrolled_in_course(
         )
 
 
-def ensure_class_active(db: Session, classroom_id: int):
+def ensure_class_active(
+    db: Session,
+    classroom_id: int,
+):
     deactivate_expired_sessions(db)
 
     now = datetime.now(timezone.utc)
@@ -167,3 +175,37 @@ def ensure_faculty_owns_attendance(
         )
 
     return attendance
+
+
+def ensure_faculty_owns_registration_session(
+    db: Session,
+    faculty_id: int,
+    session_id: int,
+):
+    registration_session = (
+        db.query(CourseRegistrationSession)
+        .filter(
+            CourseRegistrationSession.id == session_id,
+        )
+        .first()
+    )
+
+    if not registration_session:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Registration session not found",
+            status_code=404,
+        )
+
+    if registration_session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own registration session",
+            status_code=403,
+        )
+
+    return registration_session
+
+################################################################################
+# END FILE: backend/app/core/domain_rules.py
+################################################################################

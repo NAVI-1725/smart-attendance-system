@@ -51,4 +51,52 @@ class RegistrationApiService {
       '/registration-sessions/$sessionId/join',
     );
   }
+
+  Future<List<Map<String, dynamic>>> getSessionRequests({
+    required int sessionId,
+  }) async {
+    final response = await _apiClient.dio.get(
+      '/registration-sessions/$sessionId/requests',
+    );
+
+    return (response.data as List)
+        .map(
+          (item) => Map<String, dynamic>.from(
+            item as Map,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> approveRequest({
+    required int requestId,
+  }) async {
+    await _apiClient.dio.post(
+      '/registration-sessions/requests/$requestId/approve',
+    );
+  }
+
+  Future<void> rejectRequest({
+    required int requestId,
+  }) async {
+    await _apiClient.dio.post(
+      '/registration-sessions/requests/$requestId/reject',
+    );
+  }
+
+  Future<void> approveAll({
+    required int sessionId,
+  }) async {
+    await _apiClient.dio.post(
+      '/registration-sessions/$sessionId/approve-all',
+    );
+  }
+
+  Future<void> rejectAll({
+    required int sessionId,
+  }) async {
+    await _apiClient.dio.post(
+      '/registration-sessions/$sessionId/reject-all',
+    );
+  }
 }

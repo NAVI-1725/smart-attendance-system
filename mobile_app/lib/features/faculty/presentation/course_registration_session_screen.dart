@@ -7,6 +7,7 @@ import '../../../core/config/app_bootstrap.dart';
 import '../../registration/data/registration_api_service.dart';
 import '../../registration/models/registration_session.dart';
 import 'faculty_provider.dart';
+import 'registration_requests_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Providers
@@ -364,23 +365,55 @@ class _CourseRegistrationSessionScreenState
                               const SizedBox(
                                 height: 12,
                               ),
-                              SizedBox(
-                                width:
-                                    double.infinity,
-                                child:
-                                    OutlinedButton(
-                                  onPressed:
-                                      _isActionLoading
-                                          ? null
-                                          : () =>
-                                              _closeSession(
-                                                session
-                                                    .id,
-                                              ),
-                                  child: const Text(
-                                    'Close Registration',
+                              Column(
+                                children: [
+                                  SizedBox(
+                                    width:
+                                        double.infinity,
+                                    child:
+                                        ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                RegistrationRequestsScreen(
+                                              sessionId:
+                                                  session.id,
+                                              courseName:
+                                                  session.courseName,
+                                              courseCode:
+                                                  session.courseCode,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text(
+                                        'View Requests',
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(
+                                    height: 8,
+                                  ),
+                                  SizedBox(
+                                    width:
+                                        double.infinity,
+                                    child:
+                                        OutlinedButton(
+                                      onPressed:
+                                          _isActionLoading
+                                              ? null
+                                              : () =>
+                                                  _closeSession(
+                                                    session.id,
+                                                  ),
+                                      child: const Text(
+                                        'Close Registration',
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

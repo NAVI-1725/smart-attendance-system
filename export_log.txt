@@ -834,3 +834,244 @@
 [2026-06-17 01:32:31] [INFO] Export complete: 17 files, 1 parts
 [2026-06-17 01:32:48] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
 [2026-06-17 01:32:50] [INFO] Export complete: 18 files, 1 parts
+[2026-06-17 01:55:56] [INFO] Export complete: 3 files, 1 parts
+[2026-06-17 01:57:50] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 02:00:31] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/course_registration_service.py
+[2026-06-17 02:00:33] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 02:11:03] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 02:12:05] [INFO] Export complete: 3 files, 1 parts
+[2026-06-17 02:13:21] [INFO] Export complete: 4 files, 1 parts
+[2026-06-17 02:13:31] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 02:14:23] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/registration/models/registration_request.dart
+[2026-06-17 02:14:25] [INFO] Export complete: 5 files, 1 parts
+[2026-06-17 02:14:38] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/registration/models/registration_request.dart
+[2026-06-17 02:14:41] [INFO] Export complete: 9 files, 1 parts
+[2026-06-17 02:16:21] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-17 02:16:23] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 02:17:26] [INFO] Export complete: 3 files, 1 parts
+[2026-06-17 02:47:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:47:58] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:48:01] [INFO] Export complete: 8 files, 1 parts
+[2026-06-17 02:49:40] [INFO] Export complete: 4 files, 1 parts
+[2026-06-17 02:50:01] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:01] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:01] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:01] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:03] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:03] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:03] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:03] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:05] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:05] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:05] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:05] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:09] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:09] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:09] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:09] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:12] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:50:15] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:50:15] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:50:15] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:50:15] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:51:47] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Backend:
+[2026-06-17 02:51:47] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_requests.py
+[2026-06-17 02:51:47] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_request_service.py
+[2026-06-17 02:51:47] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter:
+[2026-06-17 02:51:49] [INFO] Export complete: 9 files, 1 parts
+[2026-06-17 02:54:08] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 02:57:57] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 02:58:39] [INFO] Export complete: 3 files, 1 parts
+[2026-06-17 03:14:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/faculty_sessions.py
+[2026-06-17 03:14:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-17 03:14:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-17 03:14:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-17 03:14:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/schemas/attendance_session.py
+[2026-06-17 03:14:23] [INFO] Export complete: 3 files, 1 parts
+[2026-06-17 03:14:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/faculty_sessions.py
+[2026-06-17 03:14:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-17 03:14:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-17 03:14:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-17 03:14:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/schemas/attendance_session.py
+[2026-06-17 03:14:53] [INFO] Export complete: 3 files, 1 parts
+[2026-06-17 03:18:30] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 03:18:36] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 03:20:18] [INFO] Export complete: 5 files, 1 parts
+[2026-06-17 03:21:47] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 03:34:19] [INFO] Export complete: 6 files, 1 parts
+[2026-06-17 03:53:35] [INFO] Export complete: 5 files, 1 parts
+[2026-06-17 03:59:23] [INFO] Export complete: 4 files, 1 parts
+[2026-06-17 04:02:36] [INFO] Export complete: 4 files, 1 parts
+[2026-06-17 04:11:18] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/create_classroom_screen.dart
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/edit_classroom_screen.dart
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/pubspec.yaml
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/AndroidManifest.xml
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/kotlin/com/example/mobile_app/MainActivity.kt
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/core/services/location_service.dart
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/data/admin_api_service.dart
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:18] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/create_classroom_screen.dart
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/edit_classroom_screen.dart
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/pubspec.yaml
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/AndroidManifest.xml
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/kotlin/com/example/mobile_app/MainActivity.kt
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/core/services/location_service.dart
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/data/admin_api_service.dart
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:19] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/create_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/edit_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/pubspec.yaml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/AndroidManifest.xml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/kotlin/com/example/mobile_app/MainActivity.kt
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/core/services/location_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/data/admin_api_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/create_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/edit_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/pubspec.yaml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/AndroidManifest.xml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/kotlin/com/example/mobile_app/MainActivity.kt
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/core/services/location_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/data/admin_api_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/create_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/edit_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/pubspec.yaml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/AndroidManifest.xml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/kotlin/com/example/mobile_app/MainActivity.kt
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/core/services/location_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/data/admin_api_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/create_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/presentation/classrooms/edit_classroom_screen.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/pubspec.yaml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/AndroidManifest.xml
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/android/app/src/main/kotlin/com/example/mobile_app/MainActivity.kt
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/core/services/location_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\FILE: mobile_app/lib/features/admin/data/admin_api_service.dart
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\<ENTIRE FILE>
+[2026-06-17 04:31:20] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\END FILE
+[2026-06-17 04:31:56] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/core/services/location_service.dart
+[2026-06-17 04:31:58] [INFO] Export complete: 6 files, 1 parts
+[2026-06-17 04:34:27] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 04:37:35] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\1. android/app/build.gradle (or build.gradle.kts)
+[2026-06-17 04:37:35] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\2. android/app/src/debug/AndroidManifest.xml (if exists)
+[2026-06-17 04:37:35] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\3. Flutter console output after pressing Use Current Location
+[2026-06-17 04:38:26] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/build.gradle (or build.gradle.kts)
+[2026-06-17 04:38:26] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/src/debug/AndroidManifest.xml (if exists)
+[2026-06-17 04:38:26] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/Flutter console output after pressing Use Current Location
+[2026-06-17 04:38:33] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/build.gradle (or build.gradle.kts)
+[2026-06-17 04:38:33] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/src/debug/AndroidManifest.xml (if exists)
+[2026-06-17 04:38:33] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/Flutter console output after pressing Use Current Location
+[2026-06-17 04:39:00] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/build.gradle
+[2026-06-17 04:39:03] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/build.gradle
+[2026-06-17 04:39:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/build.gradle
+[2026-06-17 04:39:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/build.gradle
+[2026-06-17 04:40:27] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/android/app/build.gradle
+[2026-06-17 04:40:29] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 04:57:35] [INFO] Export complete: 2 files, 1 parts
+[2026-06-17 05:09:14] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 05:19:33] [INFO] Export complete: 1 files, 1 parts
+[2026-06-17 05:20:16] [INFO] Export complete: 3 files, 1 parts
+[2026-06-17 05:22:51] [INFO] Export complete: 2 files, 1 parts

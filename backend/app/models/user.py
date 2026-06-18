@@ -4,10 +4,6 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-# NOTE:
-# Alembic uses app.db.base.Base as the canonical metadata source.
-# This import is aligned to ensure the User table is registered
-# in the same MetaData used by Alembic autogeneration.
 from app.db.base_class import Base
 
 
@@ -40,4 +36,10 @@ class User(Base):
     registration_sessions = relationship(
         "CourseRegistrationSession",
         back_populates="faculty",
+    )
+
+    registration_requests = relationship(
+        "CourseRegistrationRequest",
+        foreign_keys="CourseRegistrationRequest.student_id",
+        back_populates="student",
     )

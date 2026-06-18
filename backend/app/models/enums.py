@@ -53,3 +53,9 @@ class GPSValidationResult(str, Enum):
 class AttendanceEvidenceResult(str, Enum):
     CONFIRMED = "CONFIRMED"
     FLAGGED = "FLAGGED"
+
+
+class RegistrationRequestStatus(str, Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"

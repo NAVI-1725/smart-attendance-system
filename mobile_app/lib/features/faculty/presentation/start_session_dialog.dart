@@ -9,18 +9,13 @@ import '../models/classroom.dart';
 class StartSessionDialog extends StatefulWidget {
   final int courseId;
 
-  const StartSessionDialog({
-    super.key,
-    required this.courseId,
-  });
+  const StartSessionDialog({super.key, required this.courseId});
 
   @override
-  State<StartSessionDialog> createState() =>
-      _StartSessionDialogState();
+  State<StartSessionDialog> createState() => _StartSessionDialogState();
 }
 
-class _StartSessionDialogState
-    extends State<StartSessionDialog> {
+class _StartSessionDialogState extends State<StartSessionDialog> {
   late final FacultyApiService _apiService;
 
   bool _isLoading = true;
@@ -34,22 +29,13 @@ class _StartSessionDialogState
 
   int _selectedDuration = 15;
 
-  static const List<int> _durations = [
-    5,
-    10,
-    15,
-    20,
-    30,
-    60,
-  ];
+  static const List<int> _durations = [5, 10, 15, 20, 30, 60];
 
   @override
   void initState() {
     super.initState();
 
-    _apiService = FacultyApiService(
-      AppBootstrap.apiClient,
-    );
+    _apiService = FacultyApiService(AppBootstrap.apiClient);
 
     _loadClassrooms();
   }
@@ -61,8 +47,17 @@ class _StartSessionDialogState
     });
 
     try {
-      final classrooms =
-          await _apiService.getClassrooms();
+      final classrooms = await _apiService.getClassrooms();
+
+      print('CLASSROOM COUNT: ${classrooms.length}');
+
+      for (final classroom in classrooms) {
+        print(
+          'CLASSROOM => '
+          'id=${classroom.id}, '
+          'name=${classroom.name}',
+        );
+      }
 
       if (!mounted) {
         return;
@@ -72,8 +67,7 @@ class _StartSessionDialogState
         _classrooms = classrooms;
 
         if (classrooms.isNotEmpty) {
-          _selectedClassroom =
-              classrooms.first;
+          _selectedClassroom = classrooms.first;
         }
 
         _isLoading = false;
@@ -84,8 +78,7 @@ class _StartSessionDialogState
       }
 
       setState(() {
-        _error =
-            'Unable to load classrooms';
+        _error = 'Unable to load classrooms';
         _isLoading = false;
       });
     }
@@ -103,10 +96,8 @@ class _StartSessionDialogState
     try {
       await _apiService.startSession(
         courseId: widget.courseId,
-        classroomId:
-            _selectedClassroom!.id,
-        durationMinutes:
-            _selectedDuration,
+        classroomId: _selectedClassroom!.id,
+        durationMinutes: _selectedDuration,
       );
 
       if (!mounted) {
@@ -121,13 +112,7 @@ class _StartSessionDialogState
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Failed to start session',
-          ),
-        ),
-      );
+      ).showSnackBar(const SnackBar(content: Text('Failed to start session')));
     } finally {
       if (mounted) {
         setState(() {
@@ -140,9 +125,7 @@ class _StartSessionDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text(
-        'Start Session',
-      ),
+      title: const Text('Start Session'),
       content: SizedBox(
         width: 400,
         child: Builder(
@@ -150,10 +133,7 @@ class _StartSessionDialogState
             if (_isLoading) {
               return const SizedBox(
                 height: 120,
-                child: Center(
-                  child:
-                      CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               );
             }
 
@@ -161,19 +141,13 @@ class _StartSessionDialogState
               return SizedBox(
                 height: 150,
                 child: Column(
-                  mainAxisAlignment:
-                      MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(_error!),
-                    const SizedBox(
-                      height: 12,
-                    ),
+                    const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed:
-                          _loadClassrooms,
-                      child: const Text(
-                        'Retry',
-                      ),
+                      onPressed: _loadClassrooms,
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
@@ -183,85 +157,48 @@ class _StartSessionDialogState
             if (_classrooms.isEmpty) {
               return const SizedBox(
                 height: 120,
-                child: Center(
-                  child: Text(
-                    'No classrooms available',
-                  ),
-                ),
+                child: Center(child: Text('No classrooms available')),
               );
             }
 
             return Column(
-              mainAxisSize:
-                  MainAxisSize.min,
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Classroom',
-                ),
-                const SizedBox(
-                  height: 8,
-                ),
-                DropdownButtonFormField<
-                    Classroom>(
-                  value:
-                      _selectedClassroom,
-                  items:
-                      _classrooms.map(
-                    (classroom) {
-                      return DropdownMenuItem<
-                          Classroom>(
-                        value: classroom,
-                        child: Text(
-                          classroom.name,
-                        ),
-                      );
-                    },
-                  ).toList(),
-                  onChanged: (
-                    classroom,
-                  ) {
+                const Text('Classroom'),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<Classroom>(
+                  value: _selectedClassroom,
+                  items: _classrooms.map((classroom) {
+                    return DropdownMenuItem<Classroom>(
+                      value: classroom,
+                      child: Text(classroom.name),
+                    );
+                  }).toList(),
+                  onChanged: (classroom) {
                     setState(() {
-                      _selectedClassroom =
-                          classroom;
+                      _selectedClassroom = classroom;
                     });
                   },
                 ),
-                const SizedBox(
-                  height: 16,
-                ),
-                const Text(
-                  'Duration (minutes)',
-                ),
-                const SizedBox(
-                  height: 8,
-                ),
+                const SizedBox(height: 16),
+                const Text('Duration (minutes)'),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<int>(
-                  value:
-                      _selectedDuration,
-                  items:
-                      _durations.map(
-                    (duration) {
-                      return DropdownMenuItem<
-                          int>(
-                        value: duration,
-                        child: Text(
-                          '$duration minutes',
-                        ),
-                      );
-                    },
-                  ).toList(),
-                  onChanged: (
-                    duration,
-                  ) {
+                  value: _selectedDuration,
+                  items: _durations.map((duration) {
+                    return DropdownMenuItem<int>(
+                      value: duration,
+                      child: Text('$duration minutes'),
+                    );
+                  }).toList(),
+                  onChanged: (duration) {
                     if (duration == null) {
                       return;
                     }
 
                     setState(() {
-                      _selectedDuration =
-                          duration;
+                      _selectedDuration = duration;
                     });
                   },
                 ),
@@ -272,35 +209,22 @@ class _StartSessionDialogState
       ),
       actions: [
         TextButton(
-          onPressed:
-              _isSubmitting
-                  ? null
-                  : () {
-                      Navigator.of(
-                        context,
-                      ).pop(false);
-                    },
-          child: const Text(
-            'Cancel',
-          ),
+          onPressed: _isSubmitting
+              ? null
+              : () {
+                  Navigator.of(context).pop(false);
+                },
+          child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed:
-              _isSubmitting
-                  ? null
-                  : _startSession,
+          onPressed: _isSubmitting ? null : _startSession,
           child: _isSubmitting
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child:
-                      CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text(
-                  'Start Session',
-                ),
+              : const Text('Start Session'),
         ),
       ],
     );
