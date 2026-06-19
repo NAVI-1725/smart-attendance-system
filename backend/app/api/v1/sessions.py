@@ -154,6 +154,53 @@ def close_session(
     }
 
 
+@router.delete(
+    "/{session_id}",
+)
+def delete_session(
+    session_id: int,
+    db: DBSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != UserRole.FACULTY.value:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Only faculty can delete sessions",
+            status_code=403,
+        )
+
+    deactivate_expired_sessions(db)
+
+    session = ensure_faculty_owns_session(
+        db=db,
+        faculty_id=current_user.id,
+        session_id=session_id,
+    )
+
+    attendance_count = (
+        db.query(func.count(AttendanceAttempt.id))
+        .filter(
+            AttendanceAttempt.session_id == session.id,
+        )
+        .scalar()
+    )
+
+    if attendance_count > 0:
+        raise ApiError(
+            ErrorCode.INVALID_SESSION,
+            "Cannot delete a session that has attendance records",
+            status_code=409,
+        )
+
+    db.delete(session)
+    db.commit()
+
+    return {
+        "status": "deleted",
+        "session_id": session_id,
+    }
+
+
 @router.get(
     "/{session_id}/attendance",
     response_model=SessionAttendanceResponse,

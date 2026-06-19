@@ -1,8 +1,11 @@
 # backend/app/api/v1/faculty.py
 
+import csv
+import io
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -269,6 +272,136 @@ def get_course_students(
         )
 
     return results
+
+
+@router.get(
+    "/course/{course_id}/attendance/export",
+)
+def export_course_attendance(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    course_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    )
+
+    if not course_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    course = (
+        db.query(Course)
+        .filter(
+            Course.id == course_id,
+        )
+        .first()
+    )
+
+    total_sessions = (
+        db.query(func.count(AttendanceSession.id))
+        .filter(
+            AttendanceSession.course_id == course_id,
+        )
+        .scalar()
+    )
+
+    students = (
+        db.query(
+            User.id,
+            User.full_name,
+        )
+        .join(
+            Enrollment,
+            Enrollment.student_id == User.id,
+        )
+        .filter(
+            Enrollment.course_id == course_id,
+        )
+        .order_by(
+            User.full_name.asc(),
+        )
+        .all()
+    )
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+
+    writer.writerow(
+        [
+            "Student ID",
+            "Student Name",
+            "Present",
+            "Absent",
+            "Attendance %",
+        ]
+    )
+
+    for student_id, student_name in students:
+        confirmed_attendances = (
+            db.query(func.count(AttendanceAttempt.id))
+            .join(
+                AttendanceSession,
+                AttendanceAttempt.session_id
+                == AttendanceSession.id,
+            )
+            .filter(
+                AttendanceSession.course_id == course_id,
+                AttendanceAttempt.student_id
+                == student_id,
+                AttendanceAttempt.status
+                == AttendanceStatus.CONFIRMED,
+            )
+            .scalar()
+        )
+
+        present_count = confirmed_attendances or 0
+
+        absent_count = max(
+            (total_sessions or 0) - present_count,
+            0,
+        )
+
+        attendance_percentage = 0.0
+
+        if total_sessions and total_sessions > 0:
+            attendance_percentage = (
+                present_count
+                / total_sessions
+            ) * 100
+
+        writer.writerow(
+            [
+                student_id,
+                student_name,
+                present_count,
+                absent_count,
+                round(attendance_percentage, 2),
+            ]
+        )
+
+    buffer.seek(0)
+
+    course_code = (
+        course.course_code if course else str(course_id)
+    )
+
+    filename = f"attendance_{course_code}.csv"
+
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
 
 
 @router.post("/attendance/resolve")
@@ -948,8 +1081,11 @@ def get_student_history(
             "course_name": course_name,
             "status": attendance.status.value,
             "timestamp": (
+                # NOTE: AttendanceAttempt has no created_at column, so
+                # we fall back to the current time instead of crashing
+                # with AttributeError when reviewed_at is unset.
                 attendance.reviewed_at
-                or attendance.created_at
+                or datetime.now(timezone.utc)
             ),
         }
         for (
@@ -957,3 +1093,7 @@ def get_student_history(
             course_name,
         ) in history_records
     ]
+
+################################################################################
+# END FILE: backend/app/api/v1/faculty.py
+################################################################################

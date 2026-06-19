@@ -142,6 +142,24 @@ class FacultyApiService {
     );
   }
 
+  Future<void> deleteSession(
+    int sessionId,
+  ) async {
+    try {
+      await _apiClient.dio.delete(
+        '/sessions/$sessionId',
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 409) {
+        throw Exception(
+          'Cannot delete a session that has attendance records',
+        );
+      }
+
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> getSessionAttendance(
     int sessionId,
   ) async {

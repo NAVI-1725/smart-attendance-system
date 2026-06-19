@@ -1,6 +1,9 @@
 // mobile_app/lib/features/faculty/data/course_api_service.dart
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/services/api_client.dart';
 import '../models/course_detail.dart';
@@ -82,5 +85,42 @@ class CourseApiService {
           ),
         )
         .toList();
+  }
+
+  /// Downloads the attendance CSV for [courseId] and saves it to the
+  /// app's temporary directory. Returns the saved [File] so the caller
+  /// can share it (e.g. via share_plus) or open it.
+  Future<File> exportAttendance(
+    int courseId, {
+    String? courseCode,
+  }) async {
+    final Response<List<int>> response =
+        await _apiClient.dio.get<List<int>>(
+      '/faculty/course/$courseId/attendance/export',
+      options: Options(
+        responseType: ResponseType.bytes,
+      ),
+    );
+
+    final Directory directory =
+        await getTemporaryDirectory();
+
+    final String safeName =
+        (courseCode ?? 'course_$courseId')
+            .replaceAll(
+      RegExp(r'[^A-Za-z0-9_-]'),
+      '_',
+    );
+
+    final String filePath =
+        '${directory.path}/attendance_$safeName.csv';
+
+    final File file = File(filePath);
+
+    await file.writeAsBytes(
+      response.data ?? <int>[],
+    );
+
+    return file;
   }
 }

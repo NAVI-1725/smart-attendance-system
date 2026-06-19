@@ -193,6 +193,25 @@ class FacultyProvider extends ChangeNotifier {
     }
   }
 
+  /// Deletes [sessionId]. Throws if the backend rejects the deletion
+  /// (e.g. 409 because attendance records already exist) — callers
+  /// should catch and surface the error message to the user.
+  Future<void> deleteSession(
+    int sessionId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.deleteSession(
+        sessionId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> loadSessionAttendance(
     int sessionId,
   ) async {

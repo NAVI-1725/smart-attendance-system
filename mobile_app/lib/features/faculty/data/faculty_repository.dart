@@ -71,6 +71,14 @@ class FacultyRepository {
     );
   }
 
+  Future<void> deleteSession(
+    int sessionId,
+  ) {
+    return _apiService.deleteSession(
+      sessionId,
+    );
+  }
+
   Future<Map<String, dynamic>> getSessionAttendance(
     int sessionId,
   ) {

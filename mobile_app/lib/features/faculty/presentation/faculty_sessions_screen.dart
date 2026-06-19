@@ -60,6 +60,98 @@ class _FacultySessionsScreenState
     );
   }
 
+  Future<void> _confirmAndDeleteSession(
+    FacultySession session,
+  ) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(
+          'Delete Session?',
+        ),
+        content: const Text(
+          'If This session contains no attendance '
+          'records and will be permanently removed.'
+          'Else records cant be deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text(
+              'Cancel',
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    try {
+      await ref
+          .read(facultyProvider)
+          .deleteSession(
+            session.sessionId,
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      await ref
+          .read(facultyProvider)
+          .loadSessions();
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Session deleted successfully',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is Exception
+                ? e.toString().replaceFirst(
+                      'Exception: ',
+                      '',
+                    )
+                : 'Unable to delete session',
+          ),
+        ),
+      );
+    }
+  }
+
   String _formatDateTime(
     DateTime? value,
   ) {
@@ -141,14 +233,52 @@ class _FacultySessionsScreenState
                           CrossAxisAlignment
                               .start,
                       children: [
-                        Text(
-                          'Session ID: ${session.sessionId}',
-                          style:
-                              const TextStyle(
-                            fontWeight:
-                                FontWeight
-                                    .bold,
-                          ),
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment
+                                  .spaceBetween,
+                          children: [
+                            Text(
+                              'Session ID: ${session.sessionId}',
+                              style:
+                                  const TextStyle(
+                                fontWeight:
+                                    FontWeight
+                                        .bold,
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                if (value ==
+                                    'delete') {
+                                  _confirmAndDeleteSession(
+                                    session,
+                                  );
+                                } else if (value ==
+                                    'close') {
+                                  _closeSession(
+                                    session,
+                                  );
+                                }
+                              },
+                              itemBuilder:
+                                  (context) => [
+                                if (isActive)
+                                  const PopupMenuItem(
+                                    value: 'close',
+                                    child: Text(
+                                      'Close Session',
+                                    ),
+                                  ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text(
+                                    'Delete Session',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                         const SizedBox(
                           height: 8,

@@ -1,6 +1,7 @@
 // mobile_app/lib/features/faculty/presentation/course_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/config/app_bootstrap.dart';
 import '../data/course_api_service.dart';
@@ -30,6 +31,8 @@ class _CourseDetailScreenState
 
   bool _isLoading = true;
   String? _error;
+
+  bool _isExporting = false;
 
   CourseDetail? _courseDetail;
 
@@ -86,6 +89,54 @@ class _CourseDetailScreenState
         _error = 'Unable to load course';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _exportAttendance() async {
+    final detail = _courseDetail;
+
+    if (detail == null || _isExporting) {
+      return;
+    }
+
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final file = await _apiService.exportAttendance(
+        widget.courseId,
+        courseCode: detail.courseCode,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Attendance — ${detail.courseName}',
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to export attendance',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
     }
   }
 
@@ -367,6 +418,34 @@ class _CourseDetailScreenState
                     ],
                   ),
                 ],
+
+                const SizedBox(
+                  height: 12,
+                ),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: (_isExporting)
+                        ? null
+                        : _exportAttendance,
+                    icon: _isExporting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child:
+                                CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.download,
+                          ),
+                    label: const Text(
+                      'Export Attendance',
+                    ),
+                  ),
+                ),
 
                 const SizedBox(
                   height: 24,
