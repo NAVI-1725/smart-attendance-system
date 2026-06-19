@@ -2221,3 +2221,241 @@
 [2026-06-19 03:31:41] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Dependency Verification
 [2026-06-19 03:31:43] [INFO] Export complete: 8 files, 1 parts
 [2026-06-19 03:33:08] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 16:43:27] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 16:58:42] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 17:00:18] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/attendance_service.py
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(or equivalent service)
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/attendance_classification_service.py
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(or equivalent classification file)
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/course_registration.py
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(or equivalent registration file)
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(registration screen file containing "Start Registration")
+[2026-06-19 21:50:55] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(or file containing /admin/dashboard)
+[2026-06-19 21:50:57] [INFO] Export complete: 15 files, 2 parts
+[2026-06-19 21:51:40] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 21:51:40] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend registration router
+[2026-06-19 21:51:40] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(registration.py / registration_sessions.py)
+[2026-06-19 21:51:42] [INFO] Export complete: 4 files, 1 parts
+[2026-06-19 21:52:32] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:52:32] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(or registration.py)
+[2026-06-19 21:52:32] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/admin/models/admin_system_summary.dart
+[2026-06-19 21:52:35] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\For the Device Management Count bug, I need:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(the actual ChangeNotifier implementation)
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/admin/models/admin_system_summary.dart
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\because the bug is almost certainly in the JSON → model mapping.
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\For the Faculty Registration Security Bug, I still need:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration.py
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(the router containing)
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GET /registration-sessions/open
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\POST /registration-sessions/start
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\POST /registration-sessions/{id}/close
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\because that is where the filtering must happen.
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Current confirmed fixes
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Fix 1 — Single Beacon → FLAGGED
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\File:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Current:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\if beacon_count < MIN_REQUIRED_BEACONS:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\raise InvalidBLEEvidence(
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\"Insufficient BLE beacon coverage",
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\)
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Change to:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\if beacon_count < MIN_REQUIRED_BEACONS:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\return AttendanceStatus.FLAGGED
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\This is confirmed.
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Remaining blockers
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Single beacon should create FLAGGED attendance ✅ root cause found
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty can see other faculty registration sessions ⏳ need registration router
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Start Registration button remains visible during active session ⏳ need registration router/model
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Device count incorrect on dashboard ⏳ need summary model/provider mapping
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Attendance screen still shows Mark Attendance after attendance exists ⏳ need attendance screen files
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Send:
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/admin/models/admin_system_summary.dart
+[2026-06-19 21:54:53] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\For the Device Management Count bug, I need:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(the actual ChangeNotifier implementation)
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/admin/models/admin_system_summary.dart
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\because the bug is almost certainly in the JSON → model mapping.
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\For the Faculty Registration Security Bug, I still need:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration.py
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(the router containing)
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GET /registration-sessions/open
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\POST /registration-sessions/start
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\POST /registration-sessions/{id}/close
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\because that is where the filtering must happen.
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Current confirmed fixes
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Fix 1 — Single Beacon → FLAGGED
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\File:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Current:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\if beacon_count < MIN_REQUIRED_BEACONS:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\raise InvalidBLEEvidence(
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\"Insufficient BLE beacon coverage",
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\)
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Change to:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\if beacon_count < MIN_REQUIRED_BEACONS:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\return AttendanceStatus.FLAGGED
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\This is confirmed.
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Remaining blockers
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Single beacon should create FLAGGED attendance ✅ root cause found
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty can see other faculty registration sessions ⏳ need registration router
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Start Registration button remains visible during active session ⏳ need registration router/model
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Device count incorrect on dashboard ⏳ need summary model/provider mapping
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Attendance screen still shows Mark Attendance after attendance exists ⏳ need attendance screen files
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Send:
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/admin/models/admin_system_summary.dart
+[2026-06-19 21:54:54] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\For the Device Management Count bug, I need:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(the actual ChangeNotifier implementation)
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\and
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/admin/models/admin_system_summary.dart
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\because the bug is almost certainly in the JSON → model mapping.
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\For the Faculty Registration Security Bug, I still need:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration.py
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(the router containing)
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GET /registration-sessions/open
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\POST /registration-sessions/start
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\POST /registration-sessions/{id}/close
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\because that is where the filtering must happen.
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Current confirmed fixes
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Fix 1 — Single Beacon → FLAGGED
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\File:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Current:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\if beacon_count < MIN_REQUIRED_BEACONS:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\raise InvalidBLEEvidence(
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\"Insufficient BLE beacon coverage",
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\)
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Change to:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\if beacon_count < MIN_REQUIRED_BEACONS:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\return AttendanceStatus.FLAGGED
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\This is confirmed.
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Remaining blockers
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Single beacon should create FLAGGED attendance ✅ root cause found
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty can see other faculty registration sessions ⏳ need registration router
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Start Registration button remains visible during active session ⏳ need registration router/model
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Device count incorrect on dashboard ⏳ need summary model/provider mapping
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Attendance screen still shows Mark Attendance after attendance exists ⏳ need attendance screen files
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Send:
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/admin/models/admin_system_summary.dart
+[2026-06-19 21:56:04] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:56:06] [INFO] Export complete: 2 files, 1 parts
+[2026-06-19 21:57:23] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:57:23] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 21:59:02] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 21:59:02] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 21:59:04] [INFO] Export complete: 3 files, 1 parts
+[2026-06-19 22:02:48] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:02:49] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:02:50] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:02:50] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:09:14] [INFO] Export complete: 2 files, 1 parts
+[2026-06-19 22:12:59] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:13:01] [INFO] Export complete: 5 files, 1 parts
+[2026-06-19 22:15:46] [INFO] Export complete: 2 files, 1 parts
+[2026-06-19 22:18:43] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 22:22:13] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:22:15] [INFO] Export complete: 6 files, 1 parts
+[2026-06-19 22:25:56] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:25:59] [INFO] Export complete: 2 files, 1 parts
+[2026-06-19 22:27:14] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:27:16] [INFO] Export complete: 3 files, 1 parts
+[2026-06-19 22:36:59] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:36:59] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_page.dart
+[2026-06-19 22:36:59] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/session_screen.dart
+[2026-06-19 22:37:01] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_screen.dart
+[2026-06-19 22:37:01] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/attendance_page.dart
+[2026-06-19 22:37:01] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\mobile_app/lib/features/attendance/presentation/session_screen.dart
+[2026-06-19 22:43:30] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Priority 2 (Probably Required)
+[2026-06-19 22:43:30] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Priority 3 (May Be Required)
+[2026-06-19 22:43:32] [INFO] Export complete: 8 files, 1 parts
+[2026-06-19 22:43:50] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Priority 2 (Probably Required)
+[2026-06-19 22:43:50] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Priority 3 (May Be Required)
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Goal
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Verify:
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Student submits claim
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty reviews claim
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty approves/rejects claim
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Attendance updates correctly
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GROUP B — Faculty Attendance Review
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(already partially seen)
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Mobile
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Goal
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Verify:
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty sees flagged attendance
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty opens evidence
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty confirms
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty rejects
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GROUP C — Attendance Session Lifecycle
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(already partly seen)
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Mobile
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Goal
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Verify:
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Start Session
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Monitor Session
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\View Attendance
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Close Session
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GROUP D — Course Registration Workflow
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Mobile
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(already seen)
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\(already seen)
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Goal
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Verify:
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Student request
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty approve
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Enrollment created
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Reject flow works
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GROUP E — Admin Dashboard Counts
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\or
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Mobile
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Goal
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Verify:
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Students count
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Faculty count
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Course count
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Enrollment count
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Beacon count
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Device count
+[2026-06-19 22:50:51] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\GROUP F — Final Security Verification
+[2026-06-19 22:51:57] [INFO] Export complete: 8 files, 1 parts
+[2026-06-19 22:52:21] [INFO] Export complete: 8 files, 1 parts
+[2026-06-19 22:52:48] [INFO] Export complete: 5 files, 1 parts
+[2026-06-19 22:55:49] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 22:56:48] [INFO] Export complete: 5 files, 1 parts
+[2026-06-19 22:57:37] [INFO] Export complete: 9 files, 1 parts
+[2026-06-19 22:58:43] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 22:59:50] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 23:00:23] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 23:00:23] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\AND
+[2026-06-19 23:00:23] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_session_service.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\AND
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_session_service.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\AND
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_session_service.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\AND
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_session_service.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/api/v1/registration_sessions.py
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\AND
+[2026-06-19 23:00:24] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/services/registration_session_service.py
+[2026-06-19 23:01:21] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 23:02:17] [INFO] Export complete: 6 files, 1 parts
+[2026-06-19 23:05:47] [INFO] Export complete: 4 files, 1 parts
+[2026-06-19 23:07:01] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 23:14:22] [INFO] Export complete: 4 files, 1 parts
+[2026-06-19 23:26:35] [INFO] Export complete: 8 files, 1 parts
+[2026-06-19 23:50:19] [INFO] Export complete: 5 files, 1 parts
+[2026-06-19 23:51:02] [INFO] Export complete: 7 files, 1 parts
+[2026-06-19 23:53:30] [INFO] Export complete: 3 files, 1 parts
+[2026-06-19 23:59:27] [INFO] Export complete: 10 files, 1 parts
+[2026-06-20 00:04:07] [INFO] Export complete: 9 files, 1 parts

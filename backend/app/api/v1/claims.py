@@ -50,10 +50,13 @@ def create_claim(
         attendance_id=data.attendance_id,
     )
 
-    if attendance.status != AttendanceStatus.REJECTED:
+    if attendance.status not in (
+        AttendanceStatus.REJECTED,
+        AttendanceStatus.FLAGGED,
+    ):
         raise ApiError(
             ErrorCode.NOT_AUTHORIZED,
-            "Claims are only allowed for rejected attendance",
+            "Claims are only allowed for rejected or flagged attendance",
             status_code=400,
         )
 

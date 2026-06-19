@@ -88,14 +88,18 @@ class _HomeScreenState
 
     final role = authState.role;
 
-    final sessionState = ref.watch(sessionNotifierProvider);
+    final sessionState = ref.watch(
+      sessionNotifierProvider,
+    );
 
     print(
       'ACTIVE SESSIONS: '
       '${sessionState.activeSessions.length}',
     );
 
-    final attendanceState = ref.watch(attendanceNotifierProvider);
+    final attendanceState = ref.watch(
+      attendanceNotifierProvider,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -342,6 +346,18 @@ class _HomeScreenState
                                           .activeSessions[
                                       index];
 
+                              final attendanceAttempt =
+                                  attendanceState.attempt;
+
+                              final alreadySubmitted =
+                                  sessionState
+                                      .submittedSessionIds
+                                      .contains(
+                                        session
+                                            .sessionId
+                                            .toString(),
+                                      );
+
                               return Card(
                                 margin:
                                     const EdgeInsets.only(
@@ -388,38 +404,67 @@ class _HomeScreenState
                                       const SizedBox(
                                         height: 12,
                                       ),
-                                      ElevatedButton(
-                                        onPressed:
-                                            attendanceState
-                                                    .isLoading
-                                                ? null
-                                                : () {
-                                                    ref
-                                                        .read(
-                                                          attendanceNotifierProvider
-                                                              .notifier,
-                                                        )
-                                                        .submitAttendance(
-                                                          session
-                                                              .sessionId
-                                                              .toString(),
-                                                        );
-                                                  },
-                                        child: attendanceState
-                                                .isLoading
-                                            ? const SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth:
-                                                      2,
-                                                ),
-                                              )
-                                            : const Text(
-                                                'Mark Attendance',
+                                      alreadySubmitted
+                                          ? Chip(
+                                              label: Text(
+                                                attendanceAttempt?.status ==
+                                                        AttendanceStatus.confirmed
+                                                    ? 'Confirmed'
+                                                    : 'Flagged',
                                               ),
-                                      ),
+                                            )
+                                          : ElevatedButton(
+                                              onPressed:
+                                                  attendanceState
+                                                          .isLoading
+                                                      ? null
+                                                      : () async {
+                                                          await ref
+                                                              .read(
+                                                                attendanceNotifierProvider
+                                                                    .notifier,
+                                                              )
+                                                              .submitAttendance(
+                                                                session
+                                                                    .sessionId
+                                                                    .toString(),
+                                                              );
+
+                                                          final updatedAttendanceState =
+                                                              ref.read(
+                                                            attendanceNotifierProvider,
+                                                          );
+
+                                                          if (updatedAttendanceState
+                                                                  .attempt !=
+                                                              null) {
+                                                            ref
+                                                                .read(
+                                                                  sessionNotifierProvider
+                                                                      .notifier,
+                                                                )
+                                                                .markSessionSubmitted(
+                                                                  session
+                                                                      .sessionId
+                                                                      .toString(),
+                                                                );
+                                                          }
+                                                        },
+                                              child: attendanceState
+                                                      .isLoading
+                                                  ? const SizedBox(
+                                                      width: 18,
+                                                      height: 18,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        strokeWidth:
+                                                            2,
+                                                      ),
+                                                    )
+                                                  : const Text(
+                                                      'Mark Attendance',
+                                                    ),
+                                            ),
                                     ],
                                   ),
                                 ),

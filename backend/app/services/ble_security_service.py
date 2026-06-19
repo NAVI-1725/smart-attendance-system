@@ -167,9 +167,7 @@ def validate_beacon_integrity(
             MIN_REQUIRED_BEACONS,
         )
 
-        raise InvalidBLEEvidence(
-            "Insufficient BLE beacon coverage",
-        )
+        return AttendanceStatus.FLAGGED
 
     return AttendanceStatus.CONFIRMED
 

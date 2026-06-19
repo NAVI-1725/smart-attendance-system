@@ -112,9 +112,12 @@ class _AttendanceHistoryScreenState
                             .toLocal()
                             .toString(),
                       ),
-                      if (record.status
-                                  .toUpperCase() ==
-                              'REJECTED' &&
+                      if (((record.status
+                                      .toUpperCase() ==
+                                  'REJECTED') ||
+                              (record.status
+                                      .toUpperCase() ==
+                                  'FLAGGED')) &&
                           !record.hasClaim) ...[
                         const SizedBox(
                           height: 12,

@@ -125,23 +125,43 @@ def get_open_registration_sessions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    sessions = (
-        db.query(
-            CourseRegistrationSession,
-            Course,
+    if current_user.role.lower() == "faculty":
+        sessions = (
+            db.query(
+                CourseRegistrationSession,
+                Course,
+            )
+            .join(
+                Course,
+                CourseRegistrationSession.course_id == Course.id,
+            )
+            .filter(
+                CourseRegistrationSession.is_active == True,
+                CourseRegistrationSession.faculty_id == current_user.id,
+            )
+            .order_by(
+                CourseRegistrationSession.id.asc(),
+            )
+            .all()
         )
-        .join(
-            Course,
-            CourseRegistrationSession.course_id == Course.id,
+    else:
+        sessions = (
+            db.query(
+                CourseRegistrationSession,
+                Course,
+            )
+            .join(
+                Course,
+                CourseRegistrationSession.course_id == Course.id,
+            )
+            .filter(
+                CourseRegistrationSession.is_active == True,
+            )
+            .order_by(
+                CourseRegistrationSession.id.asc(),
+            )
+            .all()
         )
-        .filter(
-            CourseRegistrationSession.is_active == True,
-        )
-        .order_by(
-            CourseRegistrationSession.id.asc(),
-        )
-        .all()
-    )
 
     return [
         {

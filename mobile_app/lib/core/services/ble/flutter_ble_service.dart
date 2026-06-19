@@ -252,7 +252,7 @@ class FlutterBleService implements BleService {
       throw BluetoothDisabledException();
     }
 
-    await _ensurePermissions();
+     await _ensurePermissions();
 
     final Map<String, List<_PendingScanSample>>
         pendingSamplesPerDevice = {};

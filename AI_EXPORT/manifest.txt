@@ -3,5 +3,13 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  backend/app/services/beacon_import_service.py
+  backend/app/api/v1/faculty.py
+  backend/app/core/domain_rules.py
+  backend/app/core/errors.py
+  mobile_app/lib/features/faculty/data/course_api_service.dart
+  mobile_app/lib/features/faculty/data/faculty_repository.dart
+  mobile_app/lib/features/faculty/models/course_student.dart
+  mobile_app/lib/features/faculty/presentation/course_detail_screen.dart
+  mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+  mobile_app/lib/features/faculty/providers/faculty_provider.dart
 

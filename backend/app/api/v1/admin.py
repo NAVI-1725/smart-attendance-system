@@ -104,7 +104,7 @@ def get_system_summary(
         "enrollments": enrollment_count,
         "classrooms": classroom_count,
         "beacons": beacon_count,
-        "devices": device_count,
+        "devices_bound": device_count,
     }
 
 

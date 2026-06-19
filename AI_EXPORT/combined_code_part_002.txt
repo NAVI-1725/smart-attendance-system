@@ -1,4 +1,496 @@
 ################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/faculty_session.dart';
+import 'faculty_provider.dart';
+import 'session_monitor_screen.dart';
+
+class FacultySessionsScreen
+    extends ConsumerStatefulWidget {
+  const FacultySessionsScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<FacultySessionsScreen>
+      createState() =>
+          _FacultySessionsScreenState();
+}
+
+class _FacultySessionsScreenState
+    extends ConsumerState<FacultySessionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) {
+        ref
+            .read(facultyProvider)
+            .loadSessions();
+      },
+    );
+  }
+
+  Future<void> _closeSession(
+    FacultySession session,
+  ) async {
+    await ref
+        .read(facultyProvider)
+        .closeSession(
+          session.sessionId,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    await ref
+        .read(facultyProvider)
+        .loadSessions();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Session closed successfully',
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(
+    DateTime? value,
+  ) {
+    if (value == null) {
+      return '-';
+    }
+
+    return value.toLocal().toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Faculty Sessions',
+        ),
+      ),
+      body: Consumer(
+        builder: (
+          context,
+          ref,
+          _,
+        ) {
+          final provider =
+              ref.watch(
+                facultyProvider,
+              );
+
+          if (provider.isLoading &&
+              provider.sessions.isEmpty) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          if (provider.sessions.isEmpty) {
+            return const Center(
+              child: Text(
+                'No sessions found',
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadSessions();
+            },
+            child: ListView.builder(
+              padding:
+                  const EdgeInsets.all(16),
+              itemCount:
+                  provider.sessions.length,
+              itemBuilder: (
+                context,
+                index,
+              ) {
+                final session =
+                    provider.sessions[index];
+
+                final isActive =
+                    session.status
+                            .toUpperCase() ==
+                        'ACTIVE';
+
+                return Card(
+                  margin:
+                      const EdgeInsets.only(
+                    bottom: 12,
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          'Session ID: ${session.sessionId}',
+                          style:
+                              const TextStyle(
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 8,
+                        ),
+                        Text(
+                          'Course: ${session.courseName}',
+                        ),
+                        Text(
+                          'Status: ${session.status}',
+                        ),
+                        Text(
+                          'Started: ${_formatDateTime(session.startedAt)}',
+                        ),
+                        Text(
+                          'Closed: ${_formatDateTime(session.closedAt)}',
+                        ),
+                        if (isActive) ...[
+                          const SizedBox(
+                            height: 16,
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child:
+                                    ElevatedButton(
+                                  onPressed:
+                                      provider
+                                              .isLoading
+                                          ? null
+                                          : () =>
+                                              _closeSession(
+                                            session,
+                                          ),
+                                  child:
+                                      const Text(
+                                    'Close Session',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(
+                                width: 12,
+                              ),
+                              Expanded(
+                                child:
+                                    ElevatedButton(
+                                  onPressed:
+                                      () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) =>
+                                                SessionMonitorScreen(
+                                          sessionId:
+                                              session
+                                                  .sessionId,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child:
+                                      const Text(
+                                    'Monitor',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/flagged_attendance_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/flagged_attendance_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'faculty_provider.dart';
+import 'attendance_detail_screen.dart';
+
+class FlaggedAttendanceScreen
+    extends ConsumerStatefulWidget {
+  const FlaggedAttendanceScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<FlaggedAttendanceScreen>
+      createState() =>
+          _FlaggedAttendanceScreenState();
+}
+
+class _FlaggedAttendanceScreenState
+    extends ConsumerState<FlaggedAttendanceScreen> {
+  final TextEditingController
+      _classroomIdController =
+      TextEditingController();
+
+  final TextEditingController
+      _searchController =
+      TextEditingController();
+
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _classroomIdController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAttendance() async {
+    final classroomId = int.tryParse(
+      _classroomIdController.text,
+    );
+
+    if (classroomId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Enter a valid classroom ID',
+          ),
+        ),
+      );
+      return;
+    }
+
+    await ref
+        .read(facultyProvider)
+        .loadFlaggedAttendance(
+          classroomId: classroomId,
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Flagged Attendance',
+        ),
+      ),
+      body: Consumer(
+        builder: (
+          context,
+          ref,
+          _,
+        ) {
+          final provider =
+              ref.watch(
+                facultyProvider,
+              );
+
+          final filteredAttendance =
+              provider.flaggedAttendance.where(
+            (attendance) {
+              if (_searchQuery
+                  .trim()
+                  .isEmpty) {
+                return true;
+              }
+
+              final query =
+                  _searchQuery
+                      .toLowerCase()
+                      .trim();
+
+              return attendance
+                      .attendanceId
+                      .toString()
+                      .contains(query) ||
+                  attendance.studentName
+                      .toLowerCase()
+                      .contains(query) ||
+                  attendance.courseName
+                      .toLowerCase()
+                      .contains(query);
+            },
+          ).toList();
+
+          return Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller:
+                            _classroomIdController,
+                        keyboardType:
+                            TextInputType.number,
+                        decoration:
+                            const InputDecoration(
+                          labelText:
+                              'Classroom ID',
+                          border:
+                              OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed:
+                          provider.isLoading
+                              ? null
+                              : _loadAttendance,
+                      child: const Text(
+                        'Load',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(
+                  horizontal: 16,
+                ),
+                child: TextField(
+                  controller:
+                      _searchController,
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        'Search Attendance ID, Student Name, Course Name',
+                    prefixIcon:
+                        Icon(Icons.search),
+                    border:
+                        OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: provider.isLoading
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(),
+                      )
+                    : ListView.builder(
+                        itemCount:
+                            filteredAttendance
+                                .length,
+                        itemBuilder:
+                            (context, index) {
+                          final attendance =
+                              filteredAttendance[
+                                  index];
+
+                          return Card(
+                            margin:
+                                const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            child: ListTile(
+                              title: Text(
+                                'Attendance #${attendance.attendanceId}',
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment
+                                        .start,
+                                children: [
+                                  Text(
+                                    'Student Name: ${attendance.studentName}',
+                                  ),
+                                  Text(
+                                    'Course Name: ${attendance.courseName}',
+                                  ),
+                                  Text(
+                                    'Timestamp: ${attendance.timestamp}',
+                                  ),
+                                  Text(
+                                    'Status: ${attendance.status}',
+                                  ),
+                                ],
+                              ),
+                              trailing: const Icon(
+                                Icons
+                                    .arrow_forward_ios,
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        AttendanceDetailScreen(
+                                      attendanceId:
+                                          attendance
+                                              .attendanceId,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/flagged_attendance_screen.dart
+################################################################################
+
+################################################################################
 FILE: mobile_app/lib/features/faculty/presentation/registration_requests_screen.dart
 ################################################################################
 
@@ -1301,997 +1793,5 @@ class _StudentHistoryScreenState
 
 ################################################################################
 END FILE: mobile_app/lib/features/faculty/presentation/student_history_screen.dart
-################################################################################
-
-################################################################################
-FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
-################################################################################
-
-// mobile_app/lib/features/faculty/providers/course_provider.dart
-
-import 'package:flutter/foundation.dart';
-
-import '../data/course_api_service.dart';
-import '../models/course_detail.dart';
-import '../models/course_student.dart';
-import '../models/faculty_course.dart';
-import '../models/student_history.dart';
-
-class CourseProvider extends ChangeNotifier {
-  final CourseApiService _apiService;
-
-  CourseProvider(this._apiService);
-
-  bool isLoading = false;
-
-  List<FacultyCourse> courses = [];
-
-  CourseDetail? courseDetail;
-
-  List<CourseStudent> courseStudents = [];
-
-  List<StudentHistory> studentHistory = [];
-
-  Future<void> loadCourses() async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      courses = await _apiService.getCourses();
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadCourseDetail(
-    int courseId,
-  ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      courseDetail =
-          await _apiService.getCourseDetail(
-        courseId,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadCourseStudents(
-    int courseId,
-  ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      courseStudents =
-          await _apiService.getCourseStudents(
-        courseId,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadStudentHistory(
-    int studentId,
-  ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      studentHistory =
-          await _apiService.getStudentHistory(
-        studentId,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void clearCourseDetail() {
-    courseDetail = null;
-    courseStudents = [];
-    notifyListeners();
-  }
-
-  void clearStudentHistory() {
-    studentHistory = [];
-    notifyListeners();
-  }
-
-  void clearAll() {
-    courses = [];
-    courseDetail = null;
-    courseStudents = [];
-    studentHistory = [];
-    notifyListeners();
-  }
-}
-
-################################################################################
-END FILE: mobile_app/lib/features/faculty/providers/course_provider.dart
-################################################################################
-
-################################################################################
-FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
-################################################################################
-
-// mobile_app/lib/features/faculty/providers/faculty_provider.dart
-
-import 'package:flutter/foundation.dart';
-
-import '../data/faculty_repository.dart';
-import '../models/attendance_detail.dart';
-import '../models/attendance_evidence.dart';
-import '../models/faculty_course.dart';
-import '../models/faculty_dashboard.dart';
-import '../models/faculty_session.dart';
-import '../models/flagged_attendance.dart';
-import '../models/session_attendance.dart';
-
-class FacultyProvider extends ChangeNotifier {
-  final FacultyRepository _repository;
-
-  FacultyProvider(this._repository);
-
-  bool isLoading = false;
-
-  FacultyDashboard? dashboard;
-
-  List<FacultySession> sessions = [];
-
-  List<FacultyCourse> courses = [];
-
-  List<FlaggedAttendance> flaggedAttendance = [];
-
-  AttendanceDetail? attendanceDetail;
-
-  AttendanceEvidence? attendanceEvidence;
-
-  SessionAttendance? sessionAttendance;
-
-  Future<void> loadDashboard() async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final data =
-          await _repository.getDashboard();
-
-      dashboard = FacultyDashboard.fromJson(
-        data,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadSessions() async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final data =
-          await _repository.getSessions();
-
-      sessions = data
-          .map(
-            (item) =>
-                FacultySession.fromJson(item),
-          )
-          .toList();
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadCourses() async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final data =
-          await _repository.getCourses();
-
-      courses = data
-          .map(
-            (item) =>
-                FacultyCourse.fromJson(item),
-          )
-          .toList();
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadFlaggedAttendance({
-    required int classroomId,
-  }) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final data = await _repository
-          .getFlaggedAttendance(
-        classroomId: classroomId,
-      );
-
-      flaggedAttendance = data
-          .map(
-            (item) =>
-                FlaggedAttendance.fromJson(
-              item,
-            ),
-          )
-          .toList();
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadAttendanceDetail(
-    int attendanceId,
-  ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final data = await _repository
-          .getAttendanceDetail(
-        attendanceId,
-      );
-
-      attendanceDetail =
-          AttendanceDetail.fromJson(data);
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadAttendanceEvidence(
-    int attendanceId,
-  ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final data = await _repository
-          .getAttendanceEvidence(
-        attendanceId,
-      );
-
-      attendanceEvidence =
-          AttendanceEvidence.fromJson(
-        data,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> resolveAttendance({
-    required int attendanceId,
-    required String status,
-    required String reason,
-  }) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      await _repository.resolveAttendance(
-        attendanceId: attendanceId,
-        status: status,
-        reason: reason,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> closeSession(
-    int sessionId,
-  ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      await _repository.closeSession(
-        sessionId,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadSessionAttendance(
-    int sessionId,
-  ) async {
-    isLoading = true;
-    notifyListeners();
-
-    try {
-      final data = await _repository
-          .getSessionAttendance(
-        sessionId,
-      );
-
-      sessionAttendance =
-          SessionAttendance.fromJson(
-        data,
-      );
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
-  }
-}
-
-################################################################################
-END FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
-################################################################################
-
-################################################################################
-FILE: mobile_app/lib/features/home/home_screen.dart
-################################################################################
-
-// mobile_app/lib/features/home/home_screen.dart
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../admin/presentation/device_management_screen.dart';
-import '../auth/presentation/auth_provider.dart';
-import '../attendance/presentation/attendance_history_screen.dart';
-import '../attendance/presentation/session_provider.dart';
-import '../attendance/presentation/attendance_provider.dart';
-import '../attendance/domain/attendance_status.dart';
-import '../profile/presentation/profile_screen.dart';
-import '../faculty/presentation/faculty_dashboard_screen.dart';
-import 'registration_sessions_screen.dart';
-
-class HomeScreen extends ConsumerStatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  ConsumerState<HomeScreen> createState() =>
-      _HomeScreenState();
-}
-
-class _HomeScreenState
-    extends ConsumerState<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-
-    ref.listenManual(
-      attendanceNotifierProvider,
-      (previous, next) {
-        if (next.error != null &&
-            next.error != previous?.error) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(
-            SnackBar(
-              content: Text(next.error!),
-            ),
-          );
-        }
-      },
-    );
-
-    Future.microtask(() {
-      ref
-          .read(
-            sessionNotifierProvider.notifier,
-          )
-          .fetchActiveSessions();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final authState = ref.watch(
-      authNotifierProvider,
-    );
-
-    final role = authState.role;
-
-    final sessionState = ref.watch(sessionNotifierProvider);
-
-    print(
-      'ACTIVE SESSIONS: '
-      '${sessionState.activeSessions.length}',
-    );
-
-    final attendanceState = ref.watch(attendanceNotifierProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              ref
-                  .read(
-                    attendanceNotifierProvider.notifier,
-                  )
-                  .reset();
-
-              await ref
-                  .read(
-                    authNotifierProvider.notifier,
-                  )
-                  .logout();
-            },
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: role == 'faculty'
-            ? Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.person),
-                      label: const Text(
-                        'Profile',
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const ProfileScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(
-                        Icons.dashboard,
-                      ),
-                      label: const Text(
-                        'Faculty Dashboard',
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const FacultyDashboardScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              )
-            : role == 'admin'
-                ? Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.person),
-                          label: const Text(
-                            'Profile',
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const ProfileScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(
-                            Icons.admin_panel_settings,
-                          ),
-                          label: const Text(
-                            'Device Management',
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const DeviceManagementScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Card(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text(
-                            'Admin Dashboard Coming Soon',
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Session Status',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.history),
-                          label: const Text(
-                            'Attendance History',
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const AttendanceHistoryScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.person),
-                          label: const Text(
-                            'Profile',
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const ProfileScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.app_registration),
-                          label: const Text(
-                            'Course Registration',
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const RegistrationSessionsScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      if (sessionState.isLoading)
-                        const Center(
-                          child:
-                              CircularProgressIndicator(),
-                        )
-                      else if (!sessionState.hasSessions)
-                        const Text(
-                          'No active sessions available',
-                        )
-                      else
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: sessionState
-                                .activeSessions.length,
-                            itemBuilder:
-                                (context, index) {
-                              final session =
-                                  sessionState
-                                          .activeSessions[
-                                      index];
-
-                              return Card(
-                                margin:
-                                    const EdgeInsets.only(
-                                  bottom: 16,
-                                ),
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.all(
-                                    16,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment
-                                            .start,
-                                    children: [
-                                      Text(
-                                        session.courseCode,
-                                        style:
-                                            const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight:
-                                              FontWeight
-                                                  .bold,
-                                        ),
-                                      ),
-                                      const SizedBox(
-                                        height: 4,
-                                      ),
-                                      Text(
-                                        session.courseName,
-                                      ),
-                                      const SizedBox(
-                                        height: 12,
-                                      ),
-                                      Text(
-                                        'Faculty: ${session.facultyName}',
-                                      ),
-                                      Text(
-                                        'Classroom: ${session.classroomName}',
-                                      ),
-                                      Text(
-                                        'Expires: ${session.expiresAt}',
-                                      ),
-                                      const SizedBox(
-                                        height: 12,
-                                      ),
-                                      ElevatedButton(
-                                        onPressed:
-                                            attendanceState
-                                                    .isLoading
-                                                ? null
-                                                : () {
-                                                    ref
-                                                        .read(
-                                                          attendanceNotifierProvider
-                                                              .notifier,
-                                                        )
-                                                        .submitAttendance(
-                                                          session
-                                                              .sessionId
-                                                              .toString(),
-                                                        );
-                                                  },
-                                        child: attendanceState
-                                                .isLoading
-                                            ? const SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth:
-                                                      2,
-                                                ),
-                                              )
-                                            : const Text(
-                                                'Mark Attendance',
-                                              ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-
-                      const SizedBox(height: 16),
-
-                      if (attendanceState.attempt != null)
-                        Text(
-                          attendanceState.attempt!.status ==
-                                  AttendanceStatus
-                                      .confirmed
-                              ? 'Confirmed'
-                              : 'Flagged – Pending review',
-                          style: TextStyle(
-                            color: attendanceState
-                                        .attempt!
-                                        .status ==
-                                    AttendanceStatus
-                                        .confirmed
-                                ? Colors.green
-                                : Colors.orange,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-                    ],
-                  ),
-      ),
-    );
-  }
-}
-
-################################################################################
-END FILE: mobile_app/lib/features/home/home_screen.dart
-################################################################################
-
-################################################################################
-FILE: mobile_app/lib/features/home/registration_sessions_screen.dart
-################################################################################
-
-// mobile_app/lib/features/home/registration_sessions_screen.dart
-
-import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../core/config/app_bootstrap.dart';
-import '../registration/data/registration_api_service.dart';
-import '../registration/models/registration_session.dart';
-
-// ---------------------------------------------------------------------------
-// Providers
-// ---------------------------------------------------------------------------
-
-final _studentRegistrationApiProvider =
-    Provider<RegistrationApiService>(
-  (ref) => RegistrationApiService(
-    AppBootstrap.apiClient,
-  ),
-);
-
-final _openSessionsForStudentProvider =
-    FutureProvider.autoDispose<List<RegistrationSession>>(
-  (ref) async {
-    final service = ref.read(
-      _studentRegistrationApiProvider,
-    );
-    final raw = await service.getOpenSessions();
-    return raw
-        .map(RegistrationSession.fromJson)
-        .toList();
-  },
-);
-
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
-
-class RegistrationSessionsScreen
-    extends ConsumerStatefulWidget {
-  const RegistrationSessionsScreen({super.key});
-
-  @override
-  ConsumerState<RegistrationSessionsScreen> createState() =>
-      _RegistrationSessionsScreenState();
-}
-
-class _RegistrationSessionsScreenState
-    extends ConsumerState<RegistrationSessionsScreen> {
-  final Set<int> _joiningSessionIds = {};
-
-  Future<void> _joinSession(int sessionId) async {
-    setState(
-      () => _joiningSessionIds.add(sessionId),
-    );
-
-    try {
-      final service = ref.read(
-        _studentRegistrationApiProvider,
-      );
-      await service.joinSession(sessionId: sessionId);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Registration request submitted. Awaiting faculty approval.',
-          ),
-        ),
-      );
-
-      ref.invalidate(_openSessionsForStudentProvider);
-    } on DioException catch (e) {
-      if (!mounted) return;
-
-      final serverDetail = e.response?.data is Map
-          ? (e.response!.data as Map)['detail'] as String?
-          : null;
-
-      final String message;
-
-      if (e.response?.statusCode == 409) {
-        if (serverDetail != null &&
-            serverDetail.toLowerCase().contains('already enrolled')) {
-          message = 'You are already enrolled in this course';
-        } else if (serverDetail != null &&
-            serverDetail.toLowerCase().contains('already submitted')) {
-          message =
-              'You have already submitted a request for this course. Awaiting faculty approval.';
-        } else if (serverDetail != null &&
-            serverDetail.toLowerCase().contains('rejected')) {
-          message =
-              'Your registration request was rejected by the faculty.';
-        } else if (serverDetail != null &&
-            serverDetail.toLowerCase().contains('approved')) {
-          message = 'Your registration request was already approved.';
-        } else {
-          message = serverDetail ?? 'Unable to submit registration request';
-        }
-      } else if (e.response?.statusCode == 400) {
-        message = serverDetail ?? 'Registration session is no longer active';
-      } else {
-        message = serverDetail ?? 'Unable to submit registration request';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to submit registration request'),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(
-          () => _joiningSessionIds.remove(sessionId),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final openSessionsAsync = ref.watch(
-      _openSessionsForStudentProvider,
-    );
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Course Registration'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(_openSessionsForStudentProvider);
-        },
-        child: openSessionsAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (err, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Error loading sessions: $err',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          data: (sessions) {
-            if (sessions.isEmpty) {
-              return const Center(
-                child: Text(
-                  'No open registration sessions available',
-                ),
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: sessions.length,
-              itemBuilder: (context, index) {
-                final session = sessions[index];
-                final isJoining = _joiningSessionIds
-                    .contains(session.id);
-
-                return Card(
-                  margin: const EdgeInsets.only(
-                    bottom: 12,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          session.courseCode,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(session.courseName),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: isJoining
-                                ? null
-                                : () => _joinSession(
-                                      session.id,
-                                    ),
-                            child: isJoining
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child:
-                                        CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Request to Join',
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-################################################################################
-END FILE: mobile_app/lib/features/home/registration_sessions_screen.dart
 ################################################################################
 

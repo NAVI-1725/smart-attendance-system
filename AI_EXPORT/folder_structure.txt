@@ -1,7 +1,25 @@
 FOLDER STRUCTURE
 ============================================================
 
-└── backend
+├── backend
     └── app
-        └── services
-            └── beacon_import_service.py
+        ├── api
+            └── v1
+                └── faculty.py
+        └── core
+            ├── domain_rules.py
+            └── errors.py
+└── mobile_app
+    └── lib
+        └── features
+            └── faculty
+                ├── data
+                    ├── course_api_service.dart
+                    └── faculty_repository.dart
+                ├── models
+                    └── course_student.dart
+                ├── presentation
+                    ├── course_detail_screen.dart
+                    └── faculty_sessions_screen.dart
+                └── providers
+                    └── faculty_provider.dart

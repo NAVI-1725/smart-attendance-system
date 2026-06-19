@@ -34,6 +34,21 @@ class SessionNotifier extends StateNotifier<SessionState> {
     }
   }
 
+  void markSessionSubmitted(
+    String sessionId,
+  ) {
+    final updated =
+        Set<String>.from(
+      state.submittedSessionIds,
+    );
+
+    updated.add(sessionId);
+
+    state = state.copyWith(
+      submittedSessionIds: updated,
+    );
+  }
+
   void clearSession() {
     state = SessionState.initial();
   }

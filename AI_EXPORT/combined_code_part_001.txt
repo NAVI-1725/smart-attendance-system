@@ -1,162 +1,2713 @@
 ################################################################################
-FILE: backend/app/services/beacon_import_service.py
+FILE: backend/app/api/v1/faculty.py
 ################################################################################
 
-# backend/app/services/beacon_import_service.py
+# backend/app/api/v1/faculty.py
 
-from io import BytesIO
+from datetime import datetime, timezone
 
-from fastapi import HTTPException, UploadFile, status
-from openpyxl import load_workbook
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
-from app.models.classroom import Classroom
-from app.models.trusted_ble_beacon import TrustedBLEBeacon
-from app.schemas.beacon_import import (
-    BeaconImportError,
-    BeaconImportResult,
+from app.core.dependencies import get_current_user, get_db, require_faculty
+from app.core.domain_rules import (
+    ensure_faculty_owns_attendance,
+    ensure_faculty_owns_claim,
+)
+from app.models.attendance import AttendanceAttempt
+from app.models.attendance_claim import AttendanceClaim
+from app.models.enums import (
+    AttendanceStatus,
+    ClaimStatus,
+)
+from app.models.faculty_action_logs import FacultyActionLog
+from app.models.attendance_session import AttendanceSession
+from app.models.user import User
+from app.models.course import Course
+from app.models.faculty_course import FacultyCourse
+from app.models.enrollment import Enrollment
+from app.schemas.faculty import (
+    AttendanceDetailResponse,
+    AttendanceEvidenceResponse,
+    AttendanceSummaryResponse,
+    BleEvidenceResponse,
+    CourseStudentItem,
+    FacultyCourseDetail,
+    FacultyCourseItem,
+    FacultyDashboardResponse,
+    FacultySessionHistoryItem,
+    FlaggedAttendanceItem,
+    GpsEvidenceResponse,
+    StudentHistoryItem,
+)
+from app.schemas.faculty_resolution import FacultyResolutionRequest
+from app.schemas.claim import (
+    ClaimResponse,
+    ClaimDetailResponse,
+    ClaimResolutionRequest,
+)
+from app.services.session_cleanup_service import (
+    deactivate_expired_sessions,
+)
+
+router = APIRouter(
+    tags=["Faculty"],
+    dependencies=[Depends(require_faculty)],
 )
 
 
-def import_beacons_from_excel(
-    db: Session,
-    file: UploadFile,
-) -> BeaconImportResult:
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No file provided",
+@router.get(
+    "/courses",
+    response_model=list[FacultyCourseItem],
+)
+def get_faculty_courses(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    courses = (
+        db.query(
+            Course,
+            func.count(Enrollment.id).label(
+                "student_count",
+            ),
+        )
+        .join(
+            FacultyCourse,
+            FacultyCourse.course_id == Course.id,
+        )
+        .outerjoin(
+            Enrollment,
+            Enrollment.course_id == Course.id,
+        )
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+        )
+        .group_by(
+            Course.id,
+        )
+        .all()
+    )
+
+    results = []
+
+    for course, student_count in courses:
+        active_session = (
+            db.query(AttendanceSession)
+            .filter(
+                AttendanceSession.course_id
+                == course.id,
+                AttendanceSession.is_active == True,
+            )
+            .first()
         )
 
-    if not (
-        file.filename.endswith(".xlsx")
-        or file.filename.endswith(".xls")
+        results.append(
+            {
+                "course_id": course.id,
+                "course_code": course.course_code,
+                "course_name": course.course_name,
+                "student_count": student_count,
+                "active_session": (
+                    active_session is not None
+                ),
+            }
+        )
+
+    return results
+
+
+@router.get(
+    "/course/{course_id}",
+    response_model=FacultyCourseDetail,
+)
+def get_course_detail(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    course_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    )
+
+    if not course_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    course = (
+        db.query(Course)
+        .filter(
+            Course.id == course_id,
+        )
+        .first()
+    )
+
+    student_count = (
+        db.query(func.count(Enrollment.id))
+        .filter(
+            Enrollment.course_id == course_id,
+        )
+        .scalar()
+    )
+
+    active_session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.course_id == course_id,
+            AttendanceSession.is_active == True,
+        )
+        .first()
+    )
+
+    return {
+        "course_id": course.id,
+        "course_code": course.course_code,
+        "course_name": course.course_name,
+        "student_count": student_count,
+        "active_session": (
+            active_session is not None
+        ),
+        "active_session_id": (
+            active_session.id
+            if active_session
+            else None
+        ),
+    }
+
+
+@router.get(
+    "/course/{course_id}/students",
+    response_model=list[CourseStudentItem],
+)
+def get_course_students(
+    course_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    course_assignment = (
+        db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == current_user.id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    )
+
+    if not course_assignment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    total_sessions = (
+        db.query(func.count(AttendanceSession.id))
+        .filter(
+            AttendanceSession.course_id == course_id,
+        )
+        .scalar()
+    )
+
+    students = (
+        db.query(
+            User.id,
+            User.full_name,
+        )
+        .join(
+            Enrollment,
+            Enrollment.student_id == User.id,
+        )
+        .filter(
+            Enrollment.course_id == course_id,
+        )
+        .all()
+    )
+
+    results = []
+
+    for student_id, student_name in students:
+        confirmed_attendances = (
+            db.query(func.count(AttendanceAttempt.id))
+            .join(
+                AttendanceSession,
+                AttendanceAttempt.session_id
+                == AttendanceSession.id,
+            )
+            .filter(
+                AttendanceSession.course_id == course_id,
+                AttendanceAttempt.student_id
+                == student_id,
+                AttendanceAttempt.status
+                == AttendanceStatus.CONFIRMED,
+            )
+            .scalar()
+        )
+
+        attendance_percentage = 0.0
+
+        if total_sessions and total_sessions > 0:
+            attendance_percentage = (
+                confirmed_attendances
+                / total_sessions
+            ) * 100
+
+        results.append(
+            {
+                "student_id": student_id,
+                "student_name": student_name,
+                "attendance_percentage": round(
+                    attendance_percentage,
+                    2,
+                ),
+            }
+        )
+
+    return results
+
+
+@router.post("/attendance/resolve")
+def resolve_attendance(
+    data: FacultyResolutionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    # 1️⃣ Faculty-only authority (case-safe)
+    if current_user.role.upper() != "FACULTY":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Faculty access required",
+        )
+
+    # 2️⃣ Attendance ownership validation
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=data.attendance_id,
+    )
+
+    # 4️⃣ Idempotent review enforcement
+    if attendance.status in (
+        AttendanceStatus.CONFIRMED,
+        AttendanceStatus.REJECTED,
     ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only Excel files are supported",
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attendance already reviewed",
+        )
+
+    original_status = attendance.status
+
+    # 5️⃣ Apply resolution
+    attendance.status = data.new_status
+
+    attendance.reviewed_by = current_user.id
+
+    attendance.reviewed_at = datetime.now(
+        timezone.utc,
+    )
+
+    attendance.resolution_reason = data.reason
+
+    # 6️⃣ Immutable audit log (exam-critical)
+    log = FacultyActionLog(
+        faculty_id=current_user.id,
+        attendance_id=attendance.id,
+        original_status=original_status.value,
+        new_status=data.new_status.value,
+        resolution_type=(
+            "CONFIRM"
+            if data.new_status
+            == AttendanceStatus.CONFIRMED
+            else "REJECT"
+        ),
+        reason=data.reason,
+    )
+
+    try:
+        db.add(log)
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"status": "resolved"}
+
+
+@router.get(
+    "/attendance/{attendance_id}",
+    response_model=AttendanceDetailResponse,
+)
+def get_attendance_detail(
+    attendance_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=attendance_id,
+    )
+
+    student = (
+        db.query(User)
+        .filter(
+            User.id == attendance.student_id,
+        )
+        .first()
+    )
+
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id
+            == attendance.session_id,
+        )
+        .first()
+    )
+
+    reviewed_by_name = None
+
+    if attendance.reviewed_by is not None:
+        reviewer = (
+            db.query(User)
+            .filter(
+                User.id
+                == attendance.reviewed_by,
+            )
+            .first()
+        )
+
+        if reviewer:
+            reviewed_by_name = (
+                reviewer.full_name
+            )
+
+    return {
+        "attendance_id": attendance.id,
+        "student_id": attendance.student_id,
+        "session_id": attendance.session_id,
+        "status": attendance.status,
+        "student_name": (
+            student.full_name
+            if student
+            else ""
+        ),
+        "course_name": (
+            session.course.course_name
+            if session and session.course
+            else ""
+        ),
+        "reviewed_by": reviewed_by_name,
+        "reviewed_at": attendance.reviewed_at,
+        "resolution_reason": (
+            attendance.resolution_reason
+        ),
+    }
+
+
+@router.get(
+    "/attendance/{attendance_id}/evidence",
+    response_model=AttendanceEvidenceResponse,
+)
+def get_attendance_evidence(
+    attendance_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    attendance = ensure_faculty_owns_attendance(
+        db=db,
+        faculty_id=current_user.id,
+        attendance_id=attendance_id,
+    )
+
+    ble_evidence = [
+        {
+            "beacon_data": evidence.ble_payload,
+            "client_timestamp": evidence.client_timestamp,
+            "server_received_timestamp": evidence.server_received_timestamp,
+        }
+        for evidence in attendance.ble_evidence
+    ]
+
+    gps = attendance.gps_evidence
+
+    gps_evidence = None
+    if gps:
+        gps_evidence = {
+            "latitude": gps.latitude,
+            "longitude": gps.longitude,
+            "accuracy_meters": gps.accuracy_meters,
+            "distance_from_classroom_meters": gps.distance_from_classroom_meters,
+            "validation_result": gps.validation_result,
+            "validation_reason": gps.validation_reason,
+        }
+
+    return {
+        "ble": ble_evidence,
+        "gps": gps_evidence,
+        "client_timestamp": (
+            attendance.ble_evidence[0].client_timestamp
+            if attendance.ble_evidence
+            else None
+        ),
+        "server_received_timestamp": (
+            attendance.ble_evidence[0].server_received_timestamp
+            if attendance.ble_evidence
+            else None
+        ),
+    }
+
+
+@router.get(
+    "/dashboard",
+    response_model=FacultyDashboardResponse,
+)
+def get_dashboard(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    today_start = datetime.now(
+        timezone.utc,
+    ).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+
+    active_sessions = (
+        db.query(func.count(AttendanceSession.id))
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceSession.is_active == True,
+        )
+        .scalar()
+    )
+
+    flagged_attendance = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.FLAGGED,
+        )
+        .scalar()
+    )
+
+    confirmed_today = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.CONFIRMED,
+            AttendanceAttempt.reviewed_at >= today_start,
+        )
+        .scalar()
+    )
+
+    rejected_today = (
+        db.query(func.count(AttendanceAttempt.id))
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id == current_user.id,
+            AttendanceAttempt.status == AttendanceStatus.REJECTED,
+            AttendanceAttempt.reviewed_at >= today_start,
+        )
+        .scalar()
+    )
+
+    return {
+        "active_sessions": active_sessions,
+        "flagged_attendance": flagged_attendance,
+        "confirmed_today": confirmed_today,
+        "rejected_today": rejected_today,
+    }
+
+
+@router.get(
+    "/sessions",
+    response_model=list[FacultySessionHistoryItem],
+)
+def get_faculty_sessions(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    deactivate_expired_sessions(db)
+
+    sessions = (
+        db.query(AttendanceSession)
+        .filter(AttendanceSession.faculty_id == current_user.id)
+        .order_by(AttendanceSession.id.desc())
+        .all()
+    )
+
+    return [
+        {
+            "session_id": session.id,
+            "course_name": session.course.course_name,
+            "status": session.status,
+            "started_at": session.started_at,
+            "closed_at": session.closed_at,
+        }
+        for session in sessions
+    ]
+
+
+@router.get(
+    "/attendance-summary",
+    response_model=AttendanceSummaryResponse,
+)
+def get_attendance_summary(
+    classroom_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    confirmed = (
+        db.query(func.count(AttendanceAttempt.id))
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+            AttendanceAttempt.status == AttendanceStatus.CONFIRMED,
+        )
+        .scalar()
+    )
+
+    flagged = (
+        db.query(func.count(AttendanceAttempt.id))
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+            AttendanceAttempt.status == AttendanceStatus.FLAGGED,
+        )
+        .scalar()
+    )
+
+    total = (
+        db.query(func.count(AttendanceAttempt.id))
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+        )
+        .scalar()
+    )
+
+    return {
+        "classroom_id": classroom_id,
+        "total": total,
+        "confirmed": confirmed,
+        "flagged": flagged,
+    }
+
+
+@router.get(
+    "/flagged-attendance",
+    response_model=list[FlaggedAttendanceItem],
+)
+def get_flagged_attendance(
+    classroom_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    flagged_records = (
+        db.query(
+            AttendanceAttempt,
+            User.full_name,
+            Course.course_name,
+            AttendanceSession.started_at,
+        )
+        .join(
+            User,
+            AttendanceAttempt.student_id == User.id,
+        )
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .join(
+            Course,
+            AttendanceSession.course_id
+            == Course.id,
+        )
+        .filter(
+            AttendanceAttempt.classroom_id == classroom_id,
+            AttendanceAttempt.status
+            == AttendanceStatus.FLAGGED,
+        )
+        .order_by(
+            AttendanceAttempt.id.desc(),
+        )
+        .all()
+    )
+
+    return [
+        {
+            "attendance_id": attendance.id,
+            "student_name": student_name,
+            "course_name": course_name,
+            "status": attendance.status.value,
+            "timestamp": started_at,
+        }
+        for (
+            attendance,
+            student_name,
+            course_name,
+            started_at,
+        ) in flagged_records
+    ]
+
+
+@router.get(
+    "/claims",
+    response_model=list[ClaimResponse],
+)
+def get_faculty_claims(
+    status_filter: ClaimStatus | None = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claims_query = (
+        db.query(AttendanceClaim)
+        .join(
+            AttendanceAttempt,
+            AttendanceClaim.attendance_id
+            == AttendanceAttempt.id,
+        )
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .filter(
+            AttendanceSession.faculty_id
+            == current_user.id,
+        )
+    )
+
+    if status_filter is not None:
+        claims_query = claims_query.filter(
+            AttendanceClaim.status
+            == status_filter,
+        )
+
+    return (
+        claims_query
+        .order_by(
+            AttendanceClaim.id.desc(),
+        )
+        .all()
+    )
+
+
+@router.get(
+    "/claims/{claim_id}",
+    response_model=ClaimDetailResponse,
+)
+def get_faculty_claim_detail(
+    claim_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claim = ensure_faculty_owns_claim(
+        db=db,
+        faculty_id=current_user.id,
+        claim_id=claim_id,
+    )
+
+    return claim
+
+
+@router.post(
+    "/claims/{claim_id}/approve",
+)
+def approve_claim(
+    claim_id: int,
+    data: ClaimResolutionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claim = ensure_faculty_owns_claim(
+        db=db,
+        faculty_id=current_user.id,
+        claim_id=claim_id,
+    )
+
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == claim.attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attendance not found",
+        )
+
+    if claim.status != ClaimStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Claim already resolved",
+        )
+
+    if attendance.status != AttendanceStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attendance is not in rejected state",
         )
 
     try:
-        workbook = load_workbook(
-            filename=BytesIO(file.file.read()),
-            data_only=True,
+        claim.status = ClaimStatus.APPROVED
+
+        claim.claim_resolved_by = current_user.id
+
+        claim.claim_resolved_at = datetime.now(
+            timezone.utc,
         )
+
+        claim.claim_resolution_reason = (
+            data.resolution_reason
+        )
+
+        attendance.status = AttendanceStatus.CONFIRMED
+
+        attendance.reviewed_by = current_user.id
+
+        attendance.reviewed_at = datetime.now(
+            timezone.utc,
+        )
+
+        attendance.resolution_reason = (
+            data.resolution_reason
+        )
+
+        log = FacultyActionLog(
+            faculty_id=current_user.id,
+            attendance_id=attendance.id,
+            claim_id=claim.id,
+            original_status=AttendanceStatus.REJECTED.value,
+            new_status=AttendanceStatus.CONFIRMED.value,
+            resolution_type="CLAIM_APPROVED",
+            reason=data.resolution_reason,
+        )
+
+        db.add(log)
+
+        db.commit()
+
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid Excel file",
-        )
+        db.rollback()
+        raise
 
-    worksheet = workbook.active
+    return {"status": "approved"}
 
-    created = 0
-    skipped = 0
-    errors: list[BeaconImportError] = []
 
-    for row_number, row in enumerate(
-        worksheet.iter_rows(
-            min_row=2,
-            values_only=True,
-        ),
-        start=2,
-    ):
-        classroom_id = row[0]
-        beacon_uuid = row[1]
-        beacon_name = row[2]
-
-        if (
-            classroom_id is None
-            or beacon_uuid is None
-        ):
-            skipped += 1
-
-            errors.append(
-                BeaconImportError(
-                    row=row_number,
-                    reason=(
-                        "classroom_id and "
-                        "beacon_uuid are required"
-                    ),
-                )
-            )
-
-            continue
-
-        classroom = (
-            db.query(Classroom)
-            .filter(
-                Classroom.id == classroom_id,
-            )
-            .first()
-        )
-
-        if not classroom:
-            skipped += 1
-
-            errors.append(
-                BeaconImportError(
-                    row=row_number,
-                    reason=(
-                        f"Classroom "
-                        f"{classroom_id} "
-                        f"does not exist"
-                    ),
-                )
-            )
-
-            continue
-
-        existing_beacon = (
-            db.query(TrustedBLEBeacon)
-            .filter(
-                TrustedBLEBeacon.beacon_uuid
-                == str(beacon_uuid).strip()
-            )
-            .first()
-        )
-
-        if existing_beacon:
-            skipped += 1
-
-            errors.append(
-                BeaconImportError(
-                    row=row_number,
-                    reason=(
-                        f"Beacon UUID "
-                        f"'{beacon_uuid}' "
-                        f"already exists"
-                    ),
-                )
-            )
-
-            continue
-
-        beacon = TrustedBLEBeacon(
-            classroom_id=int(classroom_id),
-            beacon_uuid=str(
-                beacon_uuid,
-            ).strip(),
-            beacon_name=(
-                str(beacon_name).strip()
-                if beacon_name is not None
-                else None
-            ),
-        )
-
-        db.add(beacon)
-
-        created += 1
-
-    db.commit()
-
-    return BeaconImportResult(
-        created=created,
-        skipped=skipped,
-        errors=errors,
+@router.post(
+    "/claims/{claim_id}/reject",
+)
+def reject_claim(
+    claim_id: int,
+    data: ClaimResolutionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    claim = ensure_faculty_owns_claim(
+        db=db,
+        faculty_id=current_user.id,
+        claim_id=claim_id,
     )
 
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == claim.attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Attendance not found",
+        )
+
+    if claim.status != ClaimStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Claim already resolved",
+        )
+
+    if attendance.status != AttendanceStatus.REJECTED:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Attendance is not in rejected state",
+        )
+
+    try:
+        claim.status = ClaimStatus.REJECTED
+
+        claim.claim_resolved_by = current_user.id
+
+        claim.claim_resolved_at = datetime.now(
+            timezone.utc,
+        )
+
+        claim.claim_resolution_reason = (
+            data.resolution_reason
+        )
+
+        log = FacultyActionLog(
+            faculty_id=current_user.id,
+            attendance_id=attendance.id,
+            claim_id=claim.id,
+            original_status=AttendanceStatus.REJECTED.value,
+            new_status=AttendanceStatus.REJECTED.value,
+            resolution_type="CLAIM_REJECTED",
+            reason=data.resolution_reason,
+        )
+
+        db.add(log)
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    return {"status": "rejected"}
+
+
+@router.get(
+    "/student/{student_id}/history",
+    response_model=list[StudentHistoryItem],
+)
+def get_student_history(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+
+    history_records = (
+        db.query(
+            AttendanceAttempt,
+            Course.course_name,
+        )
+        .join(
+            AttendanceSession,
+            AttendanceAttempt.session_id
+            == AttendanceSession.id,
+        )
+        .join(
+            Course,
+            AttendanceSession.course_id
+            == Course.id,
+        )
+        .join(
+            FacultyCourse,
+            FacultyCourse.course_id
+            == Course.id,
+        )
+        .filter(
+            AttendanceAttempt.student_id
+            == student_id,
+            FacultyCourse.faculty_id
+            == current_user.id,
+        )
+        .order_by(
+            AttendanceAttempt.id.desc(),
+        )
+        .all()
+    )
+
+    if not history_records:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student history not found",
+        )
+
+    return [
+        {
+            "attendance_id": attendance.id,
+            "course_name": course_name,
+            "status": attendance.status.value,
+            "timestamp": (
+                attendance.reviewed_at
+                or attendance.created_at
+            ),
+        }
+        for (
+            attendance,
+            course_name,
+        ) in history_records
+    ]
+
 ################################################################################
-END FILE: backend/app/services/beacon_import_service.py
+END FILE: backend/app/api/v1/faculty.py
+################################################################################
+
+################################################################################
+FILE: backend/app/core/domain_rules.py
+################################################################################
+
+################################################################################
+# FILE: backend/app/core/domain_rules.py
+################################################################################
+
+from datetime import datetime, timezone
+
+from sqlalchemy.orm import Session
+
+from app.models.enrollment import Enrollment
+from app.models.attendance import AttendanceAttempt
+from app.models.attendance_session import AttendanceSession
+from app.models.attendance_claim import AttendanceClaim
+from app.models.faculty_course import FacultyCourse
+from app.models.course_registration_session import (
+    CourseRegistrationSession,
+)
+from app.core.errors import ApiError, ErrorCode
+from app.services.session_cleanup_service import (
+    deactivate_expired_sessions,
+)
+
+
+def ensure_student_enrolled_in_course(
+    db: Session,
+    student_id: int,
+    course_id: int,
+):
+    if (
+        not db.query(Enrollment)
+        .filter(
+            Enrollment.student_id == student_id,
+            Enrollment.course_id == course_id,
+        )
+        .first()
+    ):
+        raise ApiError(
+            ErrorCode.NOT_ENROLLED,
+            "Student not enrolled",
+            status_code=403,
+        )
+
+
+def ensure_class_active(
+    db: Session,
+    classroom_id: int,
+):
+    deactivate_expired_sessions(db)
+
+    now = datetime.now(timezone.utc)
+
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.classroom_id == classroom_id,
+            AttendanceSession.is_active == True,
+            AttendanceSession.closed_at.is_(None),
+            AttendanceSession.expires_at > now,
+        )
+        .first()
+    )
+
+    if not session:
+        raise ApiError(
+            ErrorCode.CLASS_NOT_ACTIVE,
+            "No active classroom",
+            status_code=404,
+        )
+
+    return session
+
+
+def ensure_faculty_teaches_course(
+    db: Session,
+    faculty_id: int,
+    course_id: int,
+):
+    if (
+        not db.query(FacultyCourse)
+        .filter(
+            FacultyCourse.faculty_id == faculty_id,
+            FacultyCourse.course_id == course_id,
+        )
+        .first()
+    ):
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty not assigned to course",
+            status_code=403,
+        )
+
+
+def ensure_faculty_owns_session(
+    db: Session,
+    faculty_id: int,
+    session_id: int,
+):
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == session_id,
+        )
+        .first()
+    )
+
+    if not session:
+        raise ApiError(
+            ErrorCode.SESSION_MISSING,
+            "Session not found",
+            status_code=404,
+        )
+
+    if session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own session",
+            status_code=403,
+        )
+
+    return session
+
+
+def ensure_student_owns_attendance(
+    db: Session,
+    student_id: int,
+    attendance_id: int,
+):
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance not found",
+            status_code=404,
+        )
+
+    if attendance.student_id != student_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Student does not own attendance",
+            status_code=403,
+        )
+
+    return attendance
+
+
+def ensure_faculty_owns_attendance(
+    db: Session,
+    faculty_id: int,
+    attendance_id: int,
+):
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance not found",
+            status_code=404,
+        )
+
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == attendance.session_id,
+        )
+        .first()
+    )
+
+    if not session or session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own attendance",
+            status_code=403,
+        )
+
+    return attendance
+
+
+def ensure_faculty_owns_claim(
+    db: Session,
+    faculty_id: int,
+    claim_id: int,
+):
+    claim = (
+        db.query(AttendanceClaim)
+        .filter(
+            AttendanceClaim.id == claim_id,
+        )
+        .first()
+    )
+
+    if not claim:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Claim not found",
+            status_code=404,
+        )
+
+    attendance = (
+        db.query(AttendanceAttempt)
+        .filter(
+            AttendanceAttempt.id == claim.attendance_id,
+        )
+        .first()
+    )
+
+    if not attendance:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Attendance not found",
+            status_code=404,
+        )
+
+    session = (
+        db.query(AttendanceSession)
+        .filter(
+            AttendanceSession.id == attendance.session_id,
+        )
+        .first()
+    )
+
+    if not session:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Session not found",
+            status_code=404,
+        )
+
+    if session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own claim",
+            status_code=403,
+        )
+
+    return claim
+
+
+def ensure_faculty_owns_registration_session(
+    db: Session,
+    faculty_id: int,
+    session_id: int,
+):
+    registration_session = (
+        db.query(CourseRegistrationSession)
+        .filter(
+            CourseRegistrationSession.id == session_id,
+        )
+        .first()
+    )
+
+    if not registration_session:
+        raise ApiError(
+            ErrorCode.NOT_FOUND,
+            "Registration session not found",
+            status_code=404,
+        )
+
+    if registration_session.faculty_id != faculty_id:
+        raise ApiError(
+            ErrorCode.NOT_AUTHORIZED,
+            "Faculty does not own registration session",
+            status_code=403,
+        )
+
+    return registration_session
+
+
+################################################################################
+# END FILE: backend/app/core/domain_rules.py
+################################################################################
+
+################################################################################
+END FILE: backend/app/core/domain_rules.py
+################################################################################
+
+################################################################################
+FILE: backend/app/core/errors.py
+################################################################################
+
+# backend/app/core/errors.py
+
+from enum import Enum
+from fastapi import HTTPException
+
+
+class ErrorCode(str, Enum):
+    NOT_ENROLLED = "NOT_ENROLLED"
+    CLASS_NOT_ACTIVE = "CLASS_NOT_ACTIVE"
+    ATTENDANCE_CLOSED = "ATTENDANCE_CLOSED"
+    NOT_AUTHORIZED = "NOT_AUTHORIZED"
+    SESSION_MISSING = "SESSION_MISSING"
+    DUPLICATE_ATTENDANCE = "DUPLICATE_ATTENDANCE"
+    CLASSROOM_NOT_FOUND = "CLASSROOM_NOT_FOUND"
+    NOT_FOUND = "NOT_FOUND"
+
+    SESSION_EXPIRED = "SESSION_EXPIRED"
+    SESSION_ALREADY_ACTIVE = "SESSION_ALREADY_ACTIVE"
+    SESSION_CLOSED = "SESSION_CLOSED"
+    INVALID_SESSION = "INVALID_SESSION"
+
+    INVALID_BLE_EVIDENCE = "INVALID_BLE_EVIDENCE"
+    INSUFFICIENT_BLE_EVIDENCE = "INSUFFICIENT_BLE_EVIDENCE"
+
+    BLE_REPLAY_DETECTED = "BLE_REPLAY_DETECTED"
+    BLE_TIMESTAMP_INVALID = "BLE_TIMESTAMP_INVALID"
+    DEVICE_NOT_TRUSTED = "DEVICE_NOT_TRUSTED"
+    DEVICE_BINDING_CONFLICT = "DEVICE_BINDING_CONFLICT"
+
+    CLAIM_ALREADY_EXISTS = "CLAIM_ALREADY_EXISTS"
+    INVALID_CLAIM_STATE = "INVALID_CLAIM_STATE"
+
+
+class ApiError(HTTPException):
+    def __init__(self, code: ErrorCode, message: str, status_code: int = 400):
+        super().__init__(
+            status_code=status_code,
+            detail={
+                "error": {
+                    "code": code,
+                    "message": message,
+                }
+            },
+        )
+
+################################################################################
+END FILE: backend/app/core/errors.py
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/data/course_api_service.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/data/course_api_service.dart
+
+import 'package:dio/dio.dart';
+
+import '../../../core/services/api_client.dart';
+import '../models/course_detail.dart';
+import '../models/course_student.dart';
+import '../models/faculty_course.dart';
+import '../models/student_history.dart';
+
+class CourseApiService {
+  final ApiClient _apiClient;
+
+  CourseApiService(this._apiClient);
+
+  Future<List<FacultyCourse>> getCourses() async {
+    final Response response =
+        await _apiClient.dio.get(
+      '/faculty/courses',
+    );
+
+    final List<dynamic> data =
+        response.data as List<dynamic>;
+
+    return data
+        .map(
+          (item) => FacultyCourse.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  Future<CourseDetail> getCourseDetail(
+    int courseId,
+  ) async {
+    final Response response =
+        await _apiClient.dio.get(
+      '/faculty/course/$courseId',
+    );
+
+    return CourseDetail.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  Future<List<CourseStudent>> getCourseStudents(
+    int courseId,
+  ) async {
+    final Response response =
+        await _apiClient.dio.get(
+      '/faculty/course/$courseId/students',
+    );
+
+    final List<dynamic> data =
+        response.data as List<dynamic>;
+
+    return data
+        .map(
+          (item) => CourseStudent.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+
+  Future<List<StudentHistory>> getStudentHistory(
+    int studentId,
+  ) async {
+    final Response response =
+        await _apiClient.dio.get(
+      '/faculty/student/$studentId/history',
+    );
+
+    final List<dynamic> data =
+        response.data as List<dynamic>;
+
+    return data
+        .map(
+          (item) => StudentHistory.fromJson(
+            item as Map<String, dynamic>,
+          ),
+        )
+        .toList();
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/data/course_api_service.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/data/faculty_repository.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/data/faculty_repository.dart
+
+import 'faculty_api_service.dart';
+
+class FacultyRepository {
+  final FacultyApiService _apiService;
+
+  FacultyRepository(this._apiService);
+
+  Future<Map<String, dynamic>> getDashboard() {
+    return _apiService.getDashboard();
+  }
+
+  Future<List<Map<String, dynamic>>> getFlaggedAttendance({
+    required int classroomId,
+  }) {
+    return _apiService.getFlaggedAttendance(
+      classroomId: classroomId,
+    );
+  }
+
+  Future<Map<String, dynamic>> getAttendanceDetail(
+    int attendanceId,
+  ) {
+    return _apiService.getAttendanceDetail(
+      attendanceId,
+    );
+  }
+
+  Future<Map<String, dynamic>> getAttendanceEvidence(
+    int attendanceId,
+  ) {
+    return _apiService.getAttendanceEvidence(
+      attendanceId,
+    );
+  }
+
+  Future<void> resolveAttendance({
+    required int attendanceId,
+    required String status,
+    required String reason,
+  }) {
+    return _apiService.resolveAttendance(
+      attendanceId: attendanceId,
+      status: status,
+      reason: reason,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getSessions() {
+    return _apiService.getSessions();
+  }
+
+  Future<void> startSession({
+    required int courseId,
+    required int classroomId,
+    required int durationMinutes,
+  }) {
+    return _apiService.startSession(
+      courseId: courseId,
+      classroomId: classroomId,
+      durationMinutes: durationMinutes,
+    );
+  }
+
+  Future<void> closeSession(
+    int sessionId,
+  ) {
+    return _apiService.closeSession(
+      sessionId,
+    );
+  }
+
+  Future<Map<String, dynamic>> getSessionAttendance(
+    int sessionId,
+  ) {
+    return _apiService.getSessionAttendance(
+      sessionId,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getCourses() {
+    return _apiService.getCourses();
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/data/faculty_repository.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/models/course_student.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/models/course_student.dart
+
+class CourseStudent {
+  final int studentId;
+  final String studentName;
+  final double attendancePercentage;
+
+  const CourseStudent({
+    required this.studentId,
+    required this.studentName,
+    required this.attendancePercentage,
+  });
+
+  factory CourseStudent.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return CourseStudent(
+      studentId: json['student_id'] as int,
+      studentName: json['student_name'] as String,
+      attendancePercentage:
+          (json['attendance_percentage'] as num)
+              .toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'student_id': studentId,
+      'student_name': studentName,
+      'attendance_percentage':
+          attendancePercentage,
+    };
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/models/course_student.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/course_detail_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/course_detail_screen.dart
+
+import 'package:flutter/material.dart';
+
+import '../../../core/config/app_bootstrap.dart';
+import '../data/course_api_service.dart';
+import '../data/faculty_api_service.dart';
+import '../models/course_detail.dart';
+import '../models/course_student.dart';
+import 'session_monitor_screen.dart';
+import 'start_session_dialog.dart';
+import 'student_history_screen.dart';
+
+class CourseDetailScreen extends StatefulWidget {
+  final int courseId;
+
+  const CourseDetailScreen({
+    super.key,
+    required this.courseId,
+  });
+
+  @override
+  State<CourseDetailScreen> createState() =>
+      _CourseDetailScreenState();
+}
+
+class _CourseDetailScreenState
+    extends State<CourseDetailScreen> {
+  late final CourseApiService _apiService;
+
+  bool _isLoading = true;
+  String? _error;
+
+  CourseDetail? _courseDetail;
+
+  List<CourseStudent> _students = [];
+
+  String _searchQuery = '';
+
+  // Risk filter: null = ALL, otherwise 'Good', 'Warning', 'Risk'
+  String? _riskFilter;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _apiService = CourseApiService(
+      AppBootstrap.apiClient,
+    );
+
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final detail =
+          await _apiService.getCourseDetail(
+        widget.courseId,
+      );
+
+      final students =
+          await _apiService.getCourseStudents(
+        widget.courseId,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _courseDetail = detail;
+        _students = students;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _error = 'Unable to load course';
+        _isLoading = false;
+      });
+    }
+  }
+
+  double get _averageAttendance {
+    if (_students.isEmpty) {
+      return 0.0;
+    }
+
+    final sum = _students.fold<double>(
+      0.0,
+      (acc, s) => acc + s.attendancePercentage,
+    );
+
+    return sum / _students.length;
+  }
+
+  int get _below75Count {
+    return _students
+        .where((s) => s.attendancePercentage < 75)
+        .length;
+  }
+
+  int get _below60Count {
+    return _students
+        .where((s) => s.attendancePercentage < 60)
+        .length;
+  }
+
+  List<CourseStudent> get _filteredStudents {
+    List<CourseStudent> result = _students;
+
+    // Apply risk filter first
+    if (_riskFilter != null) {
+      result = result.where((student) {
+        return _getAttendanceStatus(
+              student.attendancePercentage,
+            ) ==
+            _riskFilter;
+      }).toList();
+    }
+
+    // Then apply search filter
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+
+      result = result.where((student) {
+        return student.studentName
+                .toLowerCase()
+                .contains(query) ||
+            student.studentId
+                .toString()
+                .toLowerCase()
+                .contains(query);
+      }).toList();
+    }
+
+    return result;
+  }
+
+  String _getAttendanceStatus(
+    double percentage,
+  ) {
+    if (percentage >= 75) {
+      return 'Good';
+    } else if (percentage >= 60) {
+      return 'Warning';
+    } else {
+      return 'Risk';
+    }
+  }
+
+  Color _getAttendanceStatusColor(
+    String status,
+  ) {
+    switch (status) {
+      case 'Good':
+        return Colors.green;
+      case 'Warning':
+        return Colors.orange;
+      case 'Risk':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Course Detail',
+        ),
+      ),
+      body: Builder(
+        builder: (context) {
+          if (_isLoading) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          if (_error != null) {
+            return Center(
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize.min,
+                children: [
+                  Text(_error!),
+                  const SizedBox(
+                    height: 12,
+                  ),
+                  ElevatedButton(
+                    onPressed: _loadData,
+                    child: const Text(
+                      'Retry',
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final detail = _courseDetail;
+
+          if (detail == null) {
+            return const Center(
+              child: Text(
+                'Course not found',
+              ),
+            );
+          }
+
+          final filteredStudents =
+              _filteredStudents;
+
+          return RefreshIndicator(
+            onRefresh: _loadData,
+            child: ListView(
+              padding:
+                  const EdgeInsets.all(
+                16,
+              ),
+              children: [
+                Card(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          detail.courseName,
+                          style:
+                              Theme.of(
+                            context,
+                          ).textTheme.titleLarge,
+                        ),
+                        const SizedBox(
+                          height: 8,
+                        ),
+                        Text(
+                          'Course Code: ${detail.courseCode}',
+                        ),
+                        const SizedBox(
+                          height: 4,
+                        ),
+                        Text(
+                          'Student Count: ${detail.studentCount}',
+                        ),
+                        const SizedBox(
+                          height: 4,
+                        ),
+                        Text(
+                          'Active Session: ${detail.activeSession ? "YES" : "NO"}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 16,
+                ),
+
+                // Session UI: show Start Session only when no active session;
+                // show Active Session ID, Monitor Session, Close Session when active.
+                if (!detail.activeSession) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final result =
+                            await showDialog<bool>(
+                          context: context,
+                          builder: (_) =>
+                              StartSessionDialog(
+                            courseId:
+                                detail.courseId,
+                          ),
+                        );
+
+                        if (result == true) {
+                          await _loadData();
+                        }
+                      },
+                      child: const Text(
+                        'Start Session',
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Card(
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.all(
+                        12,
+                      ),
+                      child: Text(
+                        'Active Session ID: ${detail.activeSessionId}',
+                        style:
+                            Theme.of(
+                          context,
+                        ).textTheme.bodyMedium,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 8,
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    SessionMonitorScreen(
+                                  sessionId:
+                                      detail
+                                          .activeSessionId!,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Monitor Session',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await FacultyApiService(
+                              AppBootstrap
+                                  .apiClient,
+                            ).closeSession(
+                              detail
+                                  .activeSessionId!,
+                            );
+
+                            await _loadData();
+                          },
+                          child: const Text(
+                            'Close Session',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const SizedBox(
+                  height: 24,
+                ),
+
+                // Search bar
+                TextField(
+                  decoration:
+                      const InputDecoration(
+                    hintText:
+                        'Search by name or ID...',
+                    prefixIcon:
+                        Icon(Icons.search),
+                    border:
+                        OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                ),
+
+                const SizedBox(
+                  height: 12,
+                ),
+
+                // Risk filter chips: ALL / GOOD / WARNING / RISK
+                SingleChildScrollView(
+                  scrollDirection:
+                      Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FilterChip(
+                        label: const Text(
+                          'All',
+                        ),
+                        selected:
+                            _riskFilter == null,
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter = null;
+                          });
+                        },
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      FilterChip(
+                        label: const Text(
+                          'Good',
+                        ),
+                        selected:
+                            _riskFilter == 'Good',
+                        selectedColor:
+                            Colors.green
+                                .withOpacity(
+                          0.2,
+                        ),
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter =
+                                _riskFilter ==
+                                        'Good'
+                                    ? null
+                                    : 'Good';
+                          });
+                        },
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      FilterChip(
+                        label: const Text(
+                          'Warning',
+                        ),
+                        selected: _riskFilter ==
+                            'Warning',
+                        selectedColor:
+                            Colors.orange
+                                .withOpacity(
+                          0.2,
+                        ),
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter =
+                                _riskFilter ==
+                                        'Warning'
+                                    ? null
+                                    : 'Warning';
+                          });
+                        },
+                      ),
+                      const SizedBox(
+                        width: 8,
+                      ),
+                      FilterChip(
+                        label: const Text(
+                          'Risk',
+                        ),
+                        selected:
+                            _riskFilter == 'Risk',
+                        selectedColor:
+                            Colors.red
+                                .withOpacity(
+                          0.2,
+                        ),
+                        onSelected: (_) {
+                          setState(() {
+                            _riskFilter =
+                                _riskFilter ==
+                                        'Risk'
+                                    ? null
+                                    : 'Risk';
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 16,
+                ),
+
+                // Analytics section
+                Card(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          'Analytics',
+                          style:
+                              Theme.of(
+                            context,
+                          ).textTheme.titleMedium,
+                        ),
+                        const SizedBox(
+                          height: 12,
+                        ),
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment
+                                  .spaceBetween,
+                          children: [
+                            const Text(
+                              'Average Attendance',
+                            ),
+                            Text(
+                              '${_averageAttendance.toStringAsFixed(2)}%',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(
+                          height: 6,
+                        ),
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment
+                                  .spaceBetween,
+                          children: [
+                            const Text(
+                              'Students Below 75%',
+                            ),
+                            Text(
+                              '$_below75Count',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(
+                          height: 6,
+                        ),
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment
+                                  .spaceBetween,
+                          children: [
+                            const Text(
+                              'Students Below 60%',
+                            ),
+                            Text(
+                              '$_below60Count',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(
+                  height: 16,
+                ),
+
+                Text(
+                  'Students',
+                  style:
+                      Theme.of(
+                    context,
+                  ).textTheme.titleLarge,
+                ),
+
+                const SizedBox(
+                  height: 12,
+                ),
+
+                if (filteredStudents.isEmpty)
+                  const Card(
+                    child: Padding(
+                      padding:
+                          EdgeInsets.all(
+                        16,
+                      ),
+                      child: Text(
+                        'No students enrolled',
+                      ),
+                    ),
+                  ),
+
+                ...filteredStudents.map(
+                  (student) {
+                    final status =
+                        _getAttendanceStatus(
+                      student
+                          .attendancePercentage,
+                    );
+
+                    final statusColor =
+                        _getAttendanceStatusColor(
+                      status,
+                    );
+
+                    return Card(
+                      child: ListTile(
+                        title: Text(
+                          student.studentName,
+                        ),
+                        subtitle: Text(
+                          'Attendance: ${student.attendancePercentage.toStringAsFixed(2)}%',
+                        ),
+                        trailing: Row(
+                          mainAxisSize:
+                              MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding:
+                                  const EdgeInsets
+                                      .symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration:
+                                  BoxDecoration(
+                                color: statusColor
+                                    .withOpacity(
+                                  0.15,
+                                ),
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  12,
+                                ),
+                                border:
+                                    Border.all(
+                                  color:
+                                      statusColor,
+                                ),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(
+                                  color:
+                                      statusColor,
+                                  fontSize: 12,
+                                  fontWeight:
+                                      FontWeight
+                                          .bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(
+                              width: 4,
+                            ),
+                            const Icon(
+                              Icons.chevron_right,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  StudentHistoryScreen(
+                                studentId:
+                                    student
+                                        .studentId,
+                                studentName:
+                                    student
+                                        .studentName,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/course_detail_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/faculty_session.dart';
+import 'faculty_provider.dart';
+import 'session_monitor_screen.dart';
+
+class FacultySessionsScreen
+    extends ConsumerStatefulWidget {
+  const FacultySessionsScreen({
+    super.key,
+  });
+
+  @override
+  ConsumerState<FacultySessionsScreen>
+      createState() =>
+          _FacultySessionsScreenState();
+}
+
+class _FacultySessionsScreenState
+    extends ConsumerState<FacultySessionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) {
+        ref
+            .read(facultyProvider)
+            .loadSessions();
+      },
+    );
+  }
+
+  Future<void> _closeSession(
+    FacultySession session,
+  ) async {
+    await ref
+        .read(facultyProvider)
+        .closeSession(
+          session.sessionId,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    await ref
+        .read(facultyProvider)
+        .loadSessions();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Session closed successfully',
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(
+    DateTime? value,
+  ) {
+    if (value == null) {
+      return '-';
+    }
+
+    return value.toLocal().toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Faculty Sessions',
+        ),
+      ),
+      body: Consumer(
+        builder: (
+          context,
+          ref,
+          _,
+        ) {
+          final provider =
+              ref.watch(
+                facultyProvider,
+              );
+
+          if (provider.isLoading &&
+              provider.sessions.isEmpty) {
+            return const Center(
+              child:
+                  CircularProgressIndicator(),
+            );
+          }
+
+          if (provider.sessions.isEmpty) {
+            return const Center(
+              child: Text(
+                'No sessions found',
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              await provider.loadSessions();
+            },
+            child: ListView.builder(
+              padding:
+                  const EdgeInsets.all(16),
+              itemCount:
+                  provider.sessions.length,
+              itemBuilder: (
+                context,
+                index,
+              ) {
+                final session =
+                    provider.sessions[index];
+
+                final isActive =
+                    session.status
+                            .toUpperCase() ==
+                        'ACTIVE';
+
+                return Card(
+                  margin:
+                      const EdgeInsets.only(
+                    bottom: 12,
+                  ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(
+                      16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .start,
+                      children: [
+                        Text(
+                          'Session ID: ${session.sessionId}',
+                          style:
+                              const TextStyle(
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 8,
+                        ),
+                        Text(
+                          'Course: ${session.courseName}',
+                        ),
+                        Text(
+                          'Status: ${session.status}',
+                        ),
+                        Text(
+                          'Started: ${_formatDateTime(session.startedAt)}',
+                        ),
+                        Text(
+                          'Closed: ${_formatDateTime(session.closedAt)}',
+                        ),
+                        if (isActive) ...[
+                          const SizedBox(
+                            height: 16,
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child:
+                                    ElevatedButton(
+                                  onPressed:
+                                      provider
+                                              .isLoading
+                                          ? null
+                                          : () =>
+                                              _closeSession(
+                                            session,
+                                          ),
+                                  child:
+                                      const Text(
+                                    'Close Session',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(
+                                width: 12,
+                              ),
+                              Expanded(
+                                child:
+                                    ElevatedButton(
+                                  onPressed:
+                                      () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) =>
+                                                SessionMonitorScreen(
+                                          sessionId:
+                                              session
+                                                  .sessionId,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child:
+                                      const Text(
+                                    'Monitor',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/presentation/faculty_sessions_screen.dart
+################################################################################
+
+################################################################################
+FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
+################################################################################
+
+// mobile_app/lib/features/faculty/providers/faculty_provider.dart
+
+import 'package:flutter/foundation.dart';
+
+import '../data/faculty_repository.dart';
+import '../models/attendance_detail.dart';
+import '../models/attendance_evidence.dart';
+import '../models/faculty_course.dart';
+import '../models/faculty_dashboard.dart';
+import '../models/faculty_session.dart';
+import '../models/flagged_attendance.dart';
+import '../models/session_attendance.dart';
+
+class FacultyProvider extends ChangeNotifier {
+  final FacultyRepository _repository;
+
+  FacultyProvider(this._repository);
+
+  bool isLoading = false;
+
+  FacultyDashboard? dashboard;
+
+  List<FacultySession> sessions = [];
+
+  List<FacultyCourse> courses = [];
+
+  List<FlaggedAttendance> flaggedAttendance = [];
+
+  AttendanceDetail? attendanceDetail;
+
+  AttendanceEvidence? attendanceEvidence;
+
+  SessionAttendance? sessionAttendance;
+
+  Future<void> loadDashboard() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data =
+          await _repository.getDashboard();
+
+      dashboard = FacultyDashboard.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadSessions() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data =
+          await _repository.getSessions();
+
+      sessions = data
+          .map(
+            (item) =>
+                FacultySession.fromJson(item),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadCourses() async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data =
+          await _repository.getCourses();
+
+      courses = data
+          .map(
+            (item) =>
+                FacultyCourse.fromJson(item),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadFlaggedAttendance({
+    required int classroomId,
+  }) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getFlaggedAttendance(
+        classroomId: classroomId,
+      );
+
+      flaggedAttendance = data
+          .map(
+            (item) =>
+                FlaggedAttendance.fromJson(
+              item,
+            ),
+          )
+          .toList();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadAttendanceDetail(
+    int attendanceId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getAttendanceDetail(
+        attendanceId,
+      );
+
+      attendanceDetail =
+          AttendanceDetail.fromJson(data);
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadAttendanceEvidence(
+    int attendanceId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getAttendanceEvidence(
+        attendanceId,
+      );
+
+      attendanceEvidence =
+          AttendanceEvidence.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resolveAttendance({
+    required int attendanceId,
+    required String status,
+    required String reason,
+  }) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.resolveAttendance(
+        attendanceId: attendanceId,
+        status: status,
+        reason: reason,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> closeSession(
+    int sessionId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.closeSession(
+        sessionId,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadSessionAttendance(
+    int sessionId,
+  ) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final data = await _repository
+          .getSessionAttendance(
+        sessionId,
+      );
+
+      sessionAttendance =
+          SessionAttendance.fromJson(
+        data,
+      );
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+}
+
+################################################################################
+END FILE: mobile_app/lib/features/faculty/providers/faculty_provider.dart
 ################################################################################
 
