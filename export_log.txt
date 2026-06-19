@@ -2206,3 +2206,18 @@
 [2026-06-19 02:19:09] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\And if a dashboard model exists:
 [2026-06-19 02:19:11] [INFO] Export complete: 6 files, 1 parts
 [2026-06-19 02:27:33] [INFO] Export complete: 5 files, 1 parts
+[2026-06-19 02:38:06] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/schemas/beacon.py
+[2026-06-19 02:38:08] [INFO] Export complete: 5 files, 1 parts
+[2026-06-19 02:49:29] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\backend/app/schemas/admin.py
+[2026-06-19 03:04:41] [INFO] Export complete: 1 files, 1 parts
+[2026-06-19 03:18:37] [INFO] Export complete: 2 files, 1 parts
+[2026-06-19 03:31:25] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter API Layer
+[2026-06-19 03:31:25] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter Provider Layer
+[2026-06-19 03:31:25] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter UI Layer
+[2026-06-19 03:31:25] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Dependency Verification
+[2026-06-19 03:31:41] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter API Layer
+[2026-06-19 03:31:41] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter Provider Layer
+[2026-06-19 03:31:41] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Flutter UI Layer
+[2026-06-19 03:31:41] [ERROR] Path not found: C:/Users/kumar/smart-attendance-system\Dependency Verification
+[2026-06-19 03:31:43] [INFO] Export complete: 8 files, 1 parts
+[2026-06-19 03:33:08] [INFO] Export complete: 1 files, 1 parts

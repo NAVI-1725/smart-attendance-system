@@ -1,6 +1,11 @@
 # backend\app\api\v1\admin.py
 
-from fastapi import APIRouter, Depends
+from fastapi import (
+    APIRouter,
+    Depends,
+    UploadFile,
+    File,
+)
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from sqlalchemy import func
@@ -21,8 +26,16 @@ from app.schemas.device import (
     DeviceSearchResponse,
 )
 
+from app.schemas.beacon_import import (
+    BeaconImportResult,
+)
+
 from app.services.device_binding_service import (
     DeviceBindingService,
+)
+
+from app.services.beacon_import_service import (
+    import_beacons_from_excel,
 )
 
 router = APIRouter(
@@ -135,3 +148,17 @@ def unbind_device(
         "message":
             "Device unbound successfully",
     }
+
+
+@router.post(
+    "/beacons/import",
+    response_model=BeaconImportResult,
+)
+def import_beacons(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    return import_beacons_from_excel(
+        db,
+        file,
+    )

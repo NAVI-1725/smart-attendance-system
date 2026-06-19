@@ -1,5 +1,7 @@
 // mobile_app/lib/features/admin/providers/admin_provider.dart
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/admin_repository.dart';
@@ -27,8 +29,7 @@ class AdminProvider extends ChangeNotifier {
 
   List<AdminCourse> courses = [];
 
-  List<FacultyCourseAssignment>
-      facultyCourseAssignments = [];
+  List<FacultyCourseAssignment> facultyCourseAssignments = [];
 
   List<Enrollment> enrollments = [];
 
@@ -41,28 +42,21 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final data =
-          await _repository.getSystemSummary();
+      final data = await _repository.getSystemSummary();
 
-      systemSummary =
-          SystemSummary.fromJson(data);
+      systemSummary = SystemSummary.fromJson(data);
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> loadStudents({
-    bool? isActive,
-  }) async {
+  Future<void> loadStudents({bool? isActive}) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      students =
-          await _repository.getStudents(
-            isActive: isActive,
-          );
+      students = await _repository.getStudents(isActive: isActive);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -111,32 +105,24 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteStudent(
-    int studentId,
-  ) async {
+  Future<void> deleteStudent(int studentId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository.deleteStudent(
-        studentId,
-      );
+      await _repository.deleteStudent(studentId);
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> activateStudent(
-    int studentId,
-  ) async {
+  Future<void> activateStudent(int studentId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository.activateStudent(
-        studentId,
-      );
+      await _repository.activateStudent(studentId);
     } finally {
       isLoading = false;
       notifyListeners();
@@ -146,18 +132,12 @@ class AdminProvider extends ChangeNotifier {
   /// Returns the import summary:
   /// { "created": int, "skipped": int, "errors": List }
   /// Reloads the student list on success.
-  Future<Map<String, dynamic>>
-      importStudents(
-    String filePath,
-  ) async {
+  Future<Map<String, dynamic>> importStudents(String filePath) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      final result =
-          await _repository.importStudents(
-        filePath,
-      );
+      final result = await _repository.importStudents(filePath);
 
       return result;
     } finally {
@@ -171,8 +151,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      faculty =
-          await _repository.getFaculty();
+      faculty = await _repository.getFaculty();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -225,16 +204,12 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteFaculty(
-    int facultyId,
-  ) async {
+  Future<void> deleteFaculty(int facultyId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository.deleteFaculty(
-        facultyId,
-      );
+      await _repository.deleteFaculty(facultyId);
 
       await loadFaculty();
     } finally {
@@ -246,18 +221,12 @@ class AdminProvider extends ChangeNotifier {
   /// Returns the import summary:
   /// { "created": int, "skipped": int, "errors": List }
   /// Reloads the faculty list on success.
-  Future<Map<String, dynamic>>
-      importFaculty(
-    String filePath,
-  ) async {
+  Future<Map<String, dynamic>> importFaculty(String filePath) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      final result =
-          await _repository.importFaculty(
-        filePath,
-      );
+      final result = await _repository.importFaculty(filePath);
 
       await loadFaculty();
 
@@ -273,8 +242,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      courses =
-          await _repository.getCourses();
+      courses = await _repository.getCourses();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -323,16 +291,12 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteCourse(
-    int courseId,
-  ) async {
+  Future<void> deleteCourse(int courseId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository.deleteCourse(
-        courseId,
-      );
+      await _repository.deleteCourse(courseId);
 
       await loadCourses();
     } finally {
@@ -341,23 +305,20 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void>
-      loadFacultyCourseAssignments() async {
+  Future<void> loadFacultyCourseAssignments() async {
     isLoading = true;
     notifyListeners();
 
     try {
-      facultyCourseAssignments =
-          await _repository
-              .getFacultyCourseAssignments();
+      facultyCourseAssignments = await _repository
+          .getFacultyCourseAssignments();
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void>
-      createFacultyCourseAssignment({
+  Future<void> createFacultyCourseAssignment({
     required int facultyId,
     required int courseId,
   }) async {
@@ -365,8 +326,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _repository
-          .createFacultyCourseAssignment(
+      await _repository.createFacultyCourseAssignment(
         facultyId: facultyId,
         courseId: courseId,
       );
@@ -378,18 +338,12 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void>
-      deleteFacultyCourseAssignment(
-    int assignmentId,
-  ) async {
+  Future<void> deleteFacultyCourseAssignment(int assignmentId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository
-          .deleteFacultyCourseAssignment(
-        assignmentId,
-      );
+      await _repository.deleteFacultyCourseAssignment(assignmentId);
 
       await loadFacultyCourseAssignments();
     } finally {
@@ -403,8 +357,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      enrollments =
-          await _repository.getEnrollments();
+      enrollments = await _repository.getEnrollments();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -431,16 +384,12 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteEnrollment(
-    int enrollmentId,
-  ) async {
+  Future<void> deleteEnrollment(int enrollmentId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository.deleteEnrollment(
-        enrollmentId,
-      );
+      await _repository.deleteEnrollment(enrollmentId);
 
       await loadEnrollments();
     } finally {
@@ -454,8 +403,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      classrooms =
-          await _repository.getClassrooms();
+      classrooms = await _repository.getClassrooms();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -476,8 +424,7 @@ class AdminProvider extends ChangeNotifier {
         name: name,
         latitude: latitude,
         longitude: longitude,
-        gpsRadiusMeters:
-            gpsRadiusMeters,
+        gpsRadiusMeters: gpsRadiusMeters,
       );
 
       await loadClassrooms();
@@ -503,8 +450,7 @@ class AdminProvider extends ChangeNotifier {
         name: name,
         latitude: latitude,
         longitude: longitude,
-        gpsRadiusMeters:
-            gpsRadiusMeters,
+        gpsRadiusMeters: gpsRadiusMeters,
       );
 
       await loadClassrooms();
@@ -514,16 +460,12 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteClassroom(
-    int classroomId,
-  ) async {
+  Future<void> deleteClassroom(int classroomId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository.deleteClassroom(
-        classroomId,
-      );
+      await _repository.deleteClassroom(classroomId);
 
       await loadClassrooms();
     } finally {
@@ -537,8 +479,7 @@ class AdminProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      beacons =
-          await _repository.getBeacons();
+      beacons = await _repository.getBeacons();
     } finally {
       isLoading = false;
       notifyListeners();
@@ -593,16 +534,26 @@ class AdminProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteBeacon(
-    int beaconId,
-  ) async {
+  Future<void> deleteBeacon(int beaconId) async {
     isLoading = true;
     notifyListeners();
 
     try {
-      await _repository.deleteBeacon(
-        beaconId,
-      );
+      await _repository.deleteBeacon(beaconId);
+
+      await loadBeacons();
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> importBeacons(File file) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      await _repository.importBeacons(file);
 
       await loadBeacons();
     } finally {

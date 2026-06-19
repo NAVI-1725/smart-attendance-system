@@ -1,16 +1,7 @@
 FOLDER STRUCTURE
 ============================================================
 
-└── mobile_app
-    └── lib
-        └── features
-            ├── claims
-                ├── data
-                    └── claims_api_service.dart
-                ├── domain
-                    ├── claim.dart
-                    └── claim_status.dart
-                └── presentation
-                    └── my_claims_screen.dart
-            └── home
-                └── home_screen.dart
+└── backend
+    └── app
+        └── services
+            └── beacon_import_service.py

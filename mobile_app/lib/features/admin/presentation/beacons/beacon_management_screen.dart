@@ -1,6 +1,9 @@
 // mobile_app\lib\features\admin\presentation\beacons\beacon_management_screen.dart
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'dart:io';
 
 import '../../models/admin_beacon.dart';
 import '../admin_provider.dart';
@@ -18,6 +21,56 @@ class BeaconManagementScreen extends ConsumerStatefulWidget {
 class _BeaconManagementScreenState
     extends ConsumerState<BeaconManagementScreen> {
   String _search = '';
+
+  Future<void> _importBeacons() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          'xlsx',
+          'xls',
+        ],
+      );
+
+      if (result == null ||
+          result.files.isEmpty ||
+          result.files.first.path == null) {
+        return;
+      }
+
+      await ref.read(adminProvider).importBeacons(
+            File(
+              result.files.first.path!,
+            ),
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Beacon import completed successfully',
+          ),
+        ),
+      );
+
+      await ref.read(adminProvider).loadBeacons();
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e.toString(),
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -49,6 +102,15 @@ class _BeaconManagementScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Beacon Management'),
+        actions: [
+          IconButton(
+            onPressed: _importBeacons,
+            icon: const Icon(
+              Icons.upload_file,
+            ),
+            tooltip: 'Import Beacons',
+          ),
+        ],
       ),
       body: provider.isLoading && provider.beacons.isEmpty
           ? const Center(

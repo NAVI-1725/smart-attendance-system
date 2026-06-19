@@ -1,5 +1,7 @@
 // mobile_app/lib/features/admin/data/admin_repository.dart
 
+import 'dart:io';
+
 import '../models/admin_beacon.dart';
 import '../models/admin_course.dart';
 import '../models/admin_faculty.dart';
@@ -14,38 +16,24 @@ class AdminRepository {
 
   AdminRepository(this._apiService);
 
-  Future<Map<String, dynamic>>
-      getSystemSummary() {
+  Future<Map<String, dynamic>> getSystemSummary() {
     return _apiService.getSystemSummary();
   }
 
-  Future<List<AdminStudent>>
-      getStudents({
-    bool? isActive,
-  }) async {
-    final data =
-        await _apiService.getStudents(
-          isActive: isActive,
-        );
+  Future<List<AdminStudent>> getStudents({bool? isActive}) async {
+    final data = await _apiService.getStudents(isActive: isActive);
 
     return data
-        .map(
-          (item) =>
-              AdminStudent.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => AdminStudent.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<AdminStudent>
-      createStudent({
+  Future<AdminStudent> createStudent({
     required String fullName,
     required String email,
     required String password,
   }) async {
-    final data =
-        await _apiService.createStudent(
+    final data = await _apiService.createStudent(
       fullName: fullName,
       email: email,
       password: password,
@@ -54,27 +42,19 @@ class AdminRepository {
     return AdminStudent.fromJson(data);
   }
 
-  Future<AdminStudent>
-      getStudent(
-    int studentId,
-  ) async {
-    final data =
-        await _apiService.getStudent(
-      studentId,
-    );
+  Future<AdminStudent> getStudent(int studentId) async {
+    final data = await _apiService.getStudent(studentId);
 
     return AdminStudent.fromJson(data);
   }
 
-  Future<AdminStudent>
-      updateStudent({
+  Future<AdminStudent> updateStudent({
     required int studentId,
     required String fullName,
     required String email,
     required bool isActive,
   }) async {
-    final data =
-        await _apiService.updateStudent(
+    final data = await _apiService.updateStudent(
       studentId: studentId,
       fullName: fullName,
       email: email,
@@ -84,54 +64,32 @@ class AdminRepository {
     return AdminStudent.fromJson(data);
   }
 
-  Future<void> deleteStudent(
-    int studentId,
-  ) {
-    return _apiService.deleteStudent(
-      studentId,
-    );
+  Future<void> deleteStudent(int studentId) {
+    return _apiService.deleteStudent(studentId);
   }
 
-  Future<void> activateStudent(
-    int studentId,
-  ) {
-    return _apiService.activateStudent(
-      studentId,
-    );
+  Future<void> activateStudent(int studentId) {
+    return _apiService.activateStudent(studentId);
   }
 
-  Future<Map<String, dynamic>>
-      importStudents(
-    String filePath,
-  ) {
-    return _apiService.importStudents(
-      filePath,
-    );
+  Future<Map<String, dynamic>> importStudents(String filePath) {
+    return _apiService.importStudents(filePath);
   }
 
-  Future<List<AdminFaculty>>
-      getFaculty() async {
-    final data =
-        await _apiService.getFaculty();
+  Future<List<AdminFaculty>> getFaculty() async {
+    final data = await _apiService.getFaculty();
 
     return data
-        .map(
-          (item) =>
-              AdminFaculty.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => AdminFaculty.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<AdminFaculty>
-      createFaculty({
+  Future<AdminFaculty> createFaculty({
     required String fullName,
     required String email,
     required String password,
   }) async {
-    final data =
-        await _apiService.createFaculty(
+    final data = await _apiService.createFaculty(
       fullName: fullName,
       email: email,
       password: password,
@@ -140,27 +98,19 @@ class AdminRepository {
     return AdminFaculty.fromJson(data);
   }
 
-  Future<AdminFaculty>
-      getFacultyMember(
-    int facultyId,
-  ) async {
-    final data =
-        await _apiService.getFacultyMember(
-      facultyId,
-    );
+  Future<AdminFaculty> getFacultyMember(int facultyId) async {
+    final data = await _apiService.getFacultyMember(facultyId);
 
     return AdminFaculty.fromJson(data);
   }
 
-  Future<AdminFaculty>
-      updateFaculty({
+  Future<AdminFaculty> updateFaculty({
     required int facultyId,
     required String fullName,
     required String email,
     required bool isActive,
   }) async {
-    final data =
-        await _apiService.updateFaculty(
+    final data = await _apiService.updateFaculty(
       facultyId: facultyId,
       fullName: fullName,
       email: email,
@@ -170,45 +120,27 @@ class AdminRepository {
     return AdminFaculty.fromJson(data);
   }
 
-  Future<void> deleteFaculty(
-    int facultyId,
-  ) {
-    return _apiService.deleteFaculty(
-      facultyId,
-    );
+  Future<void> deleteFaculty(int facultyId) {
+    return _apiService.deleteFaculty(facultyId);
   }
 
-  Future<Map<String, dynamic>>
-      importFaculty(
-    String filePath,
-  ) {
-    return _apiService.importFaculty(
-      filePath,
-    );
+  Future<Map<String, dynamic>> importFaculty(String filePath) {
+    return _apiService.importFaculty(filePath);
   }
 
-  Future<List<AdminCourse>>
-      getCourses() async {
-    final data =
-        await _apiService.getCourses();
+  Future<List<AdminCourse>> getCourses() async {
+    final data = await _apiService.getCourses();
 
     return data
-        .map(
-          (item) =>
-              AdminCourse.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => AdminCourse.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<AdminCourse>
-      createCourse({
+  Future<AdminCourse> createCourse({
     required String courseCode,
     required String courseName,
   }) async {
-    final data =
-        await _apiService.createCourse(
+    final data = await _apiService.createCourse(
       courseCode: courseCode,
       courseName: courseName,
     );
@@ -216,26 +148,18 @@ class AdminRepository {
     return AdminCourse.fromJson(data);
   }
 
-  Future<AdminCourse>
-      getCourse(
-    int courseId,
-  ) async {
-    final data =
-        await _apiService.getCourse(
-      courseId,
-    );
+  Future<AdminCourse> getCourse(int courseId) async {
+    final data = await _apiService.getCourse(courseId);
 
     return AdminCourse.fromJson(data);
   }
 
-  Future<AdminCourse>
-      updateCourse({
+  Future<AdminCourse> updateCourse({
     required int courseId,
     required String courseCode,
     required String courseName,
   }) async {
-    final data =
-        await _apiService.updateCourse(
+    final data = await _apiService.updateCourse(
       courseId: courseId,
       courseCode: courseCode,
       courseName: courseName,
@@ -244,64 +168,40 @@ class AdminRepository {
     return AdminCourse.fromJson(data);
   }
 
-  Future<void> deleteCourse(
-    int courseId,
-  ) {
-    return _apiService.deleteCourse(
-      courseId,
-    );
+  Future<void> deleteCourse(int courseId) {
+    return _apiService.deleteCourse(courseId);
   }
 
-  Future<List<FacultyCourseAssignment>>
-      getFacultyCourseAssignments() async {
-    final data =
-        await _apiService
-            .getFacultyCourseAssignments();
+  Future<List<FacultyCourseAssignment>> getFacultyCourseAssignments() async {
+    final data = await _apiService.getFacultyCourseAssignments();
 
     return data
         .map(
           (item) =>
-              FacultyCourseAssignment
-                  .fromJson(
-            item as Map<String, dynamic>,
-          ),
+              FacultyCourseAssignment.fromJson(item as Map<String, dynamic>),
         )
         .toList();
   }
 
-  Future<void>
-      createFacultyCourseAssignment({
+  Future<void> createFacultyCourseAssignment({
     required int facultyId,
     required int courseId,
   }) async {
-    await _apiService
-        .createFacultyCourseAssignment(
+    await _apiService.createFacultyCourseAssignment(
       facultyId: facultyId,
       courseId: courseId,
     );
   }
 
-  Future<void>
-      deleteFacultyCourseAssignment(
-    int assignmentId,
-  ) {
-    return _apiService
-        .deleteFacultyCourseAssignment(
-      assignmentId,
-    );
+  Future<void> deleteFacultyCourseAssignment(int assignmentId) {
+    return _apiService.deleteFacultyCourseAssignment(assignmentId);
   }
 
-  Future<List<Enrollment>>
-      getEnrollments() async {
-    final data =
-        await _apiService.getEnrollments();
+  Future<List<Enrollment>> getEnrollments() async {
+    final data = await _apiService.getEnrollments();
 
     return data
-        .map(
-          (item) => Enrollment.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => Enrollment.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
@@ -315,110 +215,76 @@ class AdminRepository {
     );
   }
 
-  Future<void> deleteEnrollment(
-    int enrollmentId,
-  ) {
-    return _apiService.deleteEnrollment(
-      enrollmentId,
-    );
+  Future<void> deleteEnrollment(int enrollmentId) {
+    return _apiService.deleteEnrollment(enrollmentId);
   }
 
-  Future<List<Classroom>>
-      getClassrooms() async {
-    final data =
-        await _apiService.getClassrooms();
+  Future<List<Classroom>> getClassrooms() async {
+    final data = await _apiService.getClassrooms();
 
     return data
-        .map(
-          (item) => Classroom.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => Classroom.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<Classroom>
-      createClassroom({
+  Future<Classroom> createClassroom({
     required String name,
     required double latitude,
     required double longitude,
     required int gpsRadiusMeters,
   }) async {
-    final data =
-        await _apiService.createClassroom(
+    final data = await _apiService.createClassroom(
       name: name,
       latitude: latitude,
       longitude: longitude,
-      gpsRadiusMeters:
-          gpsRadiusMeters,
+      gpsRadiusMeters: gpsRadiusMeters,
     );
 
     return Classroom.fromJson(data);
   }
 
-  Future<Classroom>
-      getClassroom(
-    int classroomId,
-  ) async {
-    final data =
-        await _apiService.getClassroom(
-      classroomId,
-    );
+  Future<Classroom> getClassroom(int classroomId) async {
+    final data = await _apiService.getClassroom(classroomId);
 
     return Classroom.fromJson(data);
   }
 
-  Future<Classroom>
-      updateClassroom({
+  Future<Classroom> updateClassroom({
     required int classroomId,
     required String name,
     required double latitude,
     required double longitude,
     required int gpsRadiusMeters,
   }) async {
-    final data =
-        await _apiService.updateClassroom(
+    final data = await _apiService.updateClassroom(
       classroomId: classroomId,
       name: name,
       latitude: latitude,
       longitude: longitude,
-      gpsRadiusMeters:
-          gpsRadiusMeters,
+      gpsRadiusMeters: gpsRadiusMeters,
     );
 
     return Classroom.fromJson(data);
   }
 
-  Future<void> deleteClassroom(
-    int classroomId,
-  ) {
-    return _apiService.deleteClassroom(
-      classroomId,
-    );
+  Future<void> deleteClassroom(int classroomId) {
+    return _apiService.deleteClassroom(classroomId);
   }
 
-  Future<List<AdminBeacon>>
-      getBeacons() async {
-    final data =
-        await _apiService.getBeacons();
+  Future<List<AdminBeacon>> getBeacons() async {
+    final data = await _apiService.getBeacons();
 
     return data
-        .map(
-          (item) => AdminBeacon.fromJson(
-            item as Map<String, dynamic>,
-          ),
-        )
+        .map((item) => AdminBeacon.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<AdminBeacon>
-      createBeacon({
+  Future<AdminBeacon> createBeacon({
     required int classroomId,
     required String beaconUuid,
     String? beaconName,
   }) async {
-    final data =
-        await _apiService.createBeacon(
+    final data = await _apiService.createBeacon(
       classroomId: classroomId,
       beaconUuid: beaconUuid,
       beaconName: beaconName,
@@ -427,28 +293,20 @@ class AdminRepository {
     return AdminBeacon.fromJson(data);
   }
 
-  Future<AdminBeacon>
-      getBeacon(
-    int beaconId,
-  ) async {
-    final data =
-        await _apiService.getBeacon(
-      beaconId,
-    );
+  Future<AdminBeacon> getBeacon(int beaconId) async {
+    final data = await _apiService.getBeacon(beaconId);
 
     return AdminBeacon.fromJson(data);
   }
 
-  Future<AdminBeacon>
-      updateBeacon({
+  Future<AdminBeacon> updateBeacon({
     required int beaconId,
     required int classroomId,
     required String beaconUuid,
     String? beaconName,
     required bool isActive,
   }) async {
-    final data =
-        await _apiService.updateBeacon(
+    final data = await _apiService.updateBeacon(
       beaconId: beaconId,
       classroomId: classroomId,
       beaconUuid: beaconUuid,
@@ -459,11 +317,11 @@ class AdminRepository {
     return AdminBeacon.fromJson(data);
   }
 
-  Future<void> deleteBeacon(
-    int beaconId,
-  ) {
-    return _apiService.deleteBeacon(
-      beaconId,
-    );
+  Future<void> deleteBeacon(int beaconId) {
+    return _apiService.deleteBeacon(beaconId);
+  }
+
+  Future<void> importBeacons(File file) {
+    return _apiService.importBeacons(file);
   }
 }

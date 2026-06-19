@@ -3,9 +3,5 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  mobile_app/lib/features/claims/data/claims_api_service.dart
-  mobile_app/lib/features/claims/domain/claim.dart
-  mobile_app/lib/features/claims/domain/claim_status.dart
-  mobile_app/lib/features/claims/presentation/my_claims_screen.dart
-  mobile_app/lib/features/home/home_screen.dart
+  backend/app/services/beacon_import_service.py
 

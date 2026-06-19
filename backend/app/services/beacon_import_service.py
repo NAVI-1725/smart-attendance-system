@@ -1,7 +1,3 @@
-################################################################################
-FILE: backend/app/services/beacon_import_service.py
-################################################################################
-
 # backend/app/services/beacon_import_service.py
 
 from io import BytesIO
@@ -9,6 +5,7 @@ from io import BytesIO
 from fastapi import HTTPException, UploadFile, status
 from openpyxl import load_workbook
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.models.classroom import Classroom
 from app.models.trusted_ble_beacon import TrustedBLEBeacon
@@ -28,13 +25,10 @@ def import_beacons_from_excel(
             detail="No file provided",
         )
 
-    if not (
-        file.filename.endswith(".xlsx")
-        or file.filename.endswith(".xls")
-    ):
+    if not file.filename.endswith(".xlsx"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only Excel files are supported",
+            detail="Only .xlsx files are supported",
         )
 
     try:
@@ -54,6 +48,8 @@ def import_beacons_from_excel(
     skipped = 0
     errors: list[BeaconImportError] = []
 
+    seen_uuids: set[str] = set()
+
     for row_number, row in enumerate(
         worksheet.iter_rows(
             min_row=2,
@@ -64,6 +60,12 @@ def import_beacons_from_excel(
         classroom_id = row[0]
         beacon_uuid = row[1]
         beacon_name = row[2]
+
+        normalized_uuid = (
+            str(beacon_uuid).strip()
+            if beacon_uuid is not None
+            else ""
+        )
 
         if (
             classroom_id is None
@@ -78,6 +80,30 @@ def import_beacons_from_excel(
                         "classroom_id and "
                         "beacon_uuid are required"
                     ),
+                )
+            )
+
+            continue
+
+        if not normalized_uuid:
+            skipped += 1
+
+            errors.append(
+                BeaconImportError(
+                    row=row_number,
+                    reason="Beacon UUID cannot be empty",
+                )
+            )
+
+            continue
+
+        if normalized_uuid in seen_uuids:
+            skipped += 1
+
+            errors.append(
+                BeaconImportError(
+                    row=row_number,
+                    reason="Duplicate UUID in Excel file",
                 )
             )
 
@@ -111,7 +137,7 @@ def import_beacons_from_excel(
             db.query(TrustedBLEBeacon)
             .filter(
                 TrustedBLEBeacon.beacon_uuid
-                == str(beacon_uuid).strip()
+                == normalized_uuid
             )
             .first()
         )
@@ -134,9 +160,7 @@ def import_beacons_from_excel(
 
         beacon = TrustedBLEBeacon(
             classroom_id=int(classroom_id),
-            beacon_uuid=str(
-                beacon_uuid,
-            ).strip(),
+            beacon_uuid=normalized_uuid,
             beacon_name=(
                 str(beacon_name).strip()
                 if beacon_name is not None
@@ -144,19 +168,29 @@ def import_beacons_from_excel(
             ),
         )
 
+        seen_uuids.add(
+            normalized_uuid,
+        )
+
         db.add(beacon)
 
         created += 1
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Beacon import failed due to "
+                "duplicate or invalid data"
+            ),
+        )
 
     return BeaconImportResult(
         created=created,
         skipped=skipped,
         errors=errors,
     )
-
-################################################################################
-END FILE: backend/app/services/beacon_import_service.py
-################################################################################
-
