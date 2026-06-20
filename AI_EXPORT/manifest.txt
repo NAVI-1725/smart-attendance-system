@@ -3,5 +3,5 @@ AI CODE EXPORT MANIFEST
 
 Part 001
 ----------------------------------------
-  mobile_app/lib/features/faculty/data/faculty_api_service.dart
+  backend/app/db/base.py
 
